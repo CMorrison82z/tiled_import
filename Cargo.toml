@@ -6,4 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nom_xml = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/nom_xml" }
+nom_xml = { path = "/home/chris/Documents/Repos/Mine/nom_xml" }
