@@ -62,7 +62,7 @@ pub struct Object {
 pub struct Layer {
     pub id: ID,
     pub name: String,
-    pub class: String,
+    // pub class: String,
     // Cannot be modified in Tiled
     // _pos: PairU32
     // Always same as Map size
@@ -77,7 +77,8 @@ pub struct Layer {
 pub enum TiledLayer {
     Tile(Layer, Vec<Tile>),
     Object(Layer, Vec<Object>),
-    Group(Layer, Vec<ID>) // ID of the layerx
+    Image(Layer, Image),
+    Group(Layer)
 }
 
 pub struct Image {
@@ -100,10 +101,13 @@ pub struct TileSet {
     pub tiles: Vec<Tile>
 }
 
+pub enum LayerHierarchy {
+    Layer(TiledLayer),
+    Children(TiledLayer, Vec<LayerHierarchy>)
+}
+
 pub struct TiledMap {
-    pub object_layers: Vec<TiledLayer>,
-    pub image_layers: Vec<TiledLayer>,
-    pub tile_layers: Vec<TiledLayer>,
+    pub layers: LayerHierarchy,
     // Measured in tiles
     pub grid_size: PairU32,
     pub tile_size: PairU32,
