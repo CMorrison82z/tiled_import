@@ -130,16 +130,16 @@ where
 
 fn parse_layers(x: &Xml) -> Option<LayerHierarchy> {
     match x {
-        Xml::Element(t, c) => match t.value.as_str() {
-            "group" => Some(if c.is_some() {
+        Xml::Element(t, Some(c)) => match t.value.as_str() {
+            "group" => Some(
                 LayerHierarchy::Children(
                     TiledLayer::Group(parse_layer(t)),
-                    c.as_ref().unwrap().iter().filter_map(parse_layers).collect(),
-                )
-            } else {
-                LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
-            }),
-            "objectgroup" => Some(LayerHierarchy::Layer(TiledLayer::Object(parse_layer(t), todo!()))),
+                    c.iter().filter_map(parse_layers).collect(),
+                )),
+            // } else {
+            //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
+            // }),
+            "objectgroup" => Some(LayerHierarchy::Layer(TiledLayer::Object(parse_layer(t), c.iter().filter_map(|x| {})))),
             "layer" => Some(LayerHierarchy::Layer(TiledLayer::Tile(parse_layer(t), todo!()))),
             "imagelayer" => Some(LayerHierarchy::Layer(TiledLayer::Image(parse_layer(t), todo!()))),
             _ => None
