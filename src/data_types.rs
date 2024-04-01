@@ -60,14 +60,15 @@ pub enum Shape {
 // }
 
 #[derive(Clone, Debug)]
-pub struct Tile {
-    // pub global_id: ID,
-    pub local_id: ID,
-    // pub tile_type: String,
-    pub sub_rect_position: PairU32,
-    pub sub_rect_size: PairU32,
-    pub properties: Option<Properties>
-}
+pub struct Tile(pub ID);
+// pub struct Tile {
+//     // pub global_id: ID,
+//     pub local_id: ID,
+//     // pub tile_type: String,
+//     pub sub_rect_position: PairU32,
+//     pub sub_rect_size: PairU32,
+//     pub properties: Option<Properties>
+// }
 
 #[derive(Debug)]
 pub struct LayerTile {

@@ -47,12 +47,14 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
         return None;
     }
 
+    let first_gid = get_parse::<u32>(&t.attributes, "firstgid").unwrap();
+
     Some(TileSet {
         tile_size: (
             get_parse::<u32>(&t.attributes, "tilewidth").unwrap(),
             get_parse::<u32>(&t.attributes, "tileheight").unwrap(),
         ),
-        first_gid: get_parse::<u32>(&t.attributes, "firstgid").unwrap(),
+        first_gid,
         name: t.attributes.get("name").unwrap().clone(),
         margin: get_parse::<u8>(&t.attributes, "margin").unwrap_or(0),
         spacing: get_parse::<u8>(&t.attributes, "spacing").unwrap_or(0),
@@ -68,7 +70,7 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
                 _ => unreachable!(), // This will panic if Xml::Element is not matched
             })
             .collect(),
-        tiles: get_parse::<u32>(&t.attributes, "tilecount").unwrap()
+        tiles: (0..(get_parse::<u32>(&t.attributes, "tilecount").unwrap())).map(|i| Tile(first_gid + i)).collect()
         // TODO:
         // Individual time-elements are only if the tilset is based off of multiple images...
         // Otherwise, we need to iterate and give everything and ID ourselves.
@@ -211,7 +213,7 @@ fn parse_tile_from_gid(tilesets: &Vec<TileSet>, bits: &u32) -> Option<LayerTile>
         let tileset = crate::util::get_tileset_for_gid(tilesets, gid)?;
         let id = gid.0 - tileset.first_gid;
 
-        let tile = (tileset.tiles.iter().find(|t| t.local_id == id)?).clone();
+        let tile = (tileset.tiles.iter().find(|Tile(t_id)| *t_id == id)?).clone();
 
         Some(LayerTile {
             tile,
