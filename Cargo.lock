@@ -36,6 +36,7 @@ dependencies = [
 name = "tiled_import"
 version = "0.1.0"
 dependencies = [
+ "nom",
  "nom_xml",
 ]
 

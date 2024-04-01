@@ -1,0 +1,1 @@
+TODO: Tiled doesn't seem to use a string for booleans, instead uses `1` or `0`. We must account for this when parsing (See an example for `visible`)

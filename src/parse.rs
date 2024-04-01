@@ -2,15 +2,20 @@ use std::{
     borrow::Borrow, collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf, str::FromStr,
 };
 
-use nom_xml::{types::{Tag, Xml}, *};
+use nom_xml::{
+    types::{Tag, Xml},
+    *,
+};
 
-use crate::data_types::*;
+use crate::{data_types::*, util::parse_tiles_csv};
 
 pub fn parse<'a>(i: &'a str) -> Result<TiledMap, ()> {
     let tmx_root = Xml::from_input_str(i).unwrap();
     let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
-        panic!()
+        panic!("oh shit")
     };
+
+    let tile_sets = get_tile_sets(&elements);
 
     Ok(TiledMap {
         grid_size: (
@@ -21,8 +26,8 @@ pub fn parse<'a>(i: &'a str) -> Result<TiledMap, ()> {
             get_parse::<u32>(&map_tag.attributes, "tilewidth").unwrap(),
             get_parse::<u32>(&map_tag.attributes, "tileheight").unwrap(),
         ),
-        tile_sets: get_tile_sets(&elements),
-        layers: parse_layers(&tmx_root).unwrap(),
+        layers: parse_layers(&tile_sets, &tmx_root).unwrap(),
+        tile_sets,
     })
 }
 
@@ -49,42 +54,46 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
         ),
         first_gid: get_parse::<u32>(&t.attributes, "firstgid").unwrap(),
         name: t.attributes.get("name").unwrap().clone(),
-        margin: get_parse::<u8>(&t.attributes, "margin").unwrap(),
-        spacing: get_parse::<u8>(&t.attributes, "margin").unwrap(),
-        images_bytes: e
+        margin: get_parse::<u8>(&t.attributes, "margin").unwrap_or(0),
+        spacing: get_parse::<u8>(&t.attributes, "spacing").unwrap_or(0),
+        images: e
             .iter()
             .filter(|x| x.tag_has_name("image"))
             .map(|xml_element| match xml_element {
                 Xml::Element(img_tag, _) => Image {
                     source: img_tag.attributes.get("source").unwrap().into(),
                     // size: (get_parse::<u32>(img_tag.attributes, "width").unwrap(), get_parse::<u32>(img_tag.attributes, "height").unwrap()),
-                    format: img_tag.attributes.get("format").unwrap().clone(),
+                    format: img_tag.attributes.get("format").unwrap_or(&"png".into()).clone(),
                 },
                 _ => unreachable!(), // This will panic if Xml::Element is not matched
             })
             .collect(),
-        tiles: e
-            .iter()
-            .filter(|x| x.tag_has_name("tile"))
-            .map(|xml_element| match xml_element {
-                Xml::Element(tile_tag, tile_elems) => Tile {
-                    local_id: get_parse(&tile_tag.attributes, "id").unwrap(),
-                    sub_rect_size: (
-                        get_parse::<u32>(&t.attributes, "width").unwrap(),
-                        get_parse::<u32>(&t.attributes, "height").unwrap(),
-                    ),
-                    sub_rect_position: (
-                        get_parse::<u32>(&t.attributes, "x").unwrap(),
-                        get_parse::<u32>(&t.attributes, "y").unwrap(),
-                    ),
-                    properties: tile_elems
-                        .as_ref()
-                        .map(|v| parse_tmx_properties(&v))
-                        .flatten(),
-                },
-                _ => unreachable!(),
-            })
-            .collect(),
+        tiles: get_parse::<u32>(&t.attributes, "tilecount").unwrap()
+        // TODO:
+        // Individual time-elements are only if the tilset is based off of multiple images...
+        // Otherwise, we need to iterate and give everything and ID ourselves.
+        // tiles: e
+        //     .iter()
+        //     .filter(|x| x.tag_has_name("tile"))
+        //     .map(|xml_element| match xml_element {
+        //         Xml::Element(tile_tag, tile_elems) => Tile {
+        //             local_id: get_parse(&tile_tag.attributes, "id").unwrap(),
+        //             sub_rect_size: (
+        //                 get_parse::<u32>(&t.attributes, "width").unwrap(),
+        //                 get_parse::<u32>(&t.attributes, "height").unwrap(),
+        //             ),
+        //             sub_rect_position: (
+        //                 get_parse::<u32>(&t.attributes, "x").unwrap(),
+        //                 get_parse::<u32>(&t.attributes, "y").unwrap(),
+        //             ),
+        //             properties: tile_elems
+        //                 .as_ref()
+        //                 .map(|v| parse_tmx_properties(&v))
+        //                 .flatten(),
+        //         },
+        //         _ => unreachable!(),
+        //     })
+        //     .collect(),
     })
 }
 
@@ -128,37 +137,130 @@ where
     hm.get(field).map(|v| v.parse::<T>().ok()).flatten()
 }
 
-fn parse_layers(x: &Xml) -> Option<LayerHierarchy> {
+fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     match x {
         Xml::Element(t, Some(c)) => match t.value.as_str() {
-            "group" => Some(
-                LayerHierarchy::Children(
-                    TiledLayer::Group(parse_layer(t)),
-                    c.iter().filter_map(parse_layers).collect(),
-                )),
+            "group" => Some(LayerHierarchy::Children(
+                TiledLayer::Group(parse_layer(t)),
+                c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
+            )),
+            "map" => Some(LayerHierarchy::Children(
+                TiledLayer::Group(Layer {
+                    id: 0,
+                    name: "base".into(),
+                    visible: true,
+                    opacity: 1.,
+                    parallax: (0., 0.),
+                    repeatx: false,
+                    repeaty: false,
+                }),
+                c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
+            )),
             // } else {
             //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
             // }),
-            "objectgroup" => Some(LayerHierarchy::Layer(TiledLayer::Object(parse_layer(t), c.iter().filter_map(|x| {})))),
-            "layer" => Some(LayerHierarchy::Layer(TiledLayer::Tile(parse_layer(t), todo!()))),
-            "imagelayer" => Some(LayerHierarchy::Layer(TiledLayer::Image(parse_layer(t), todo!()))),
-            _ => None
+            "objectgroup" => Some(LayerHierarchy::Layer(TiledLayer::Object(
+                parse_layer(t),
+                c.iter().filter_map(object_parse).collect(),
+            ))),
+            "layer" => Some(LayerHierarchy::Layer(TiledLayer::Tile(
+                parse_layer(t),
+                grid_parse(v, c.iter().find(|x| if let Xml::Element(t, _) = x {t.value == "data"} else {false}).unwrap())
+            ))),
+            "imagelayer" => Some(LayerHierarchy::Layer(TiledLayer::Image(
+                parse_layer(t),
+                todo!(),
+            ))),
+            _ => None,
         },
         _ => None,
     }
 }
 
+fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Vec<LayerTile> {
+    let Xml::Element(t, Some(c)) = x else {panic!()};
+
+    let Some(Xml::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {panic!("Only csv is supported")};
+
+    // TODO:
+    // Parse text into vec<gid>
+
+    parse_tiles_csv(s.as_str()).unwrap().iter().filter_map(|gid| parse_tile_from_gid(v, gid)).collect() }
+
+// NOTE:
+// Maybe use later to support xml elements, but probably not...
+fn parse_tile(tilesets: &Vec<TileSet>, x: &Xml) -> Option<LayerTile> {
+    let Xml::Element(t, _) = x else {return None};
+
+    let bits: u32 = t.attributes.get("gid").unwrap().parse().unwrap();
+
+    parse_tile_from_gid(tilesets, &bits)
+}
+
+fn parse_tile_from_gid(tilesets: &Vec<TileSet>, bits: &u32) -> Option<LayerTile> {
+    let flags = bits & ALL_FLIP_FLAGS;
+
+    let gid = Gid(bits & !ALL_FLIP_FLAGS);
+    let flip_d = flags & FLIPPED_DIAGONALLY_FLAG == FLIPPED_DIAGONALLY_FLAG; // Swap x and y axis (anti-diagonally) [flips over y = -x line]
+    let flip_h = flags & FLIPPED_HORIZONTALLY_FLAG == FLIPPED_HORIZONTALLY_FLAG; // Flip tile over y axis
+    let flip_v = flags & FLIPPED_VERTICALLY_FLAG == FLIPPED_VERTICALLY_FLAG; // Flip tile over x axis
+
+    if gid == Gid::EMPTY {
+        None
+    } else {
+        let tileset = crate::util::get_tileset_for_gid(tilesets, gid)?;
+        let id = gid.0 - tileset.first_gid;
+
+        let tile = (tileset.tiles.iter().find(|t| t.local_id == id)?).clone();
+
+        Some(LayerTile {
+            tile,
+            flip_h,
+            flip_v,
+            flip_d,
+        })
+    }
+}
+
+fn object_parse(x: &Xml) -> Option<Object> {
+    let Xml::Element(t, _) = x else { return None };
+
+    if t.value != "object" {
+        return None;
+    };
+
+    Some(Object {
+        id: get_parse(&t.attributes, "id").unwrap(),
+        // tile_type: get_parse(&t.attributes, "id").unwrap(),
+        position: (
+            get_parse::<u32>(&t.attributes, "x").unwrap(),
+            get_parse::<u32>(&t.attributes, "y").unwrap(),
+        ),
+        size: (
+            get_parse::<u32>(&t.attributes, "width").unwrap(),
+            get_parse::<u32>(&t.attributes, "height").unwrap(),
+        ),
+        rotation: get_parse(&t.attributes, "rotation").unwrap(),
+        tile_global_id: get_parse(&t.attributes, "gid").unwrap(),
+        visible: (get_parse::<u8>(&t.attributes, "visible").unwrap() == 1),
+    })
+}
+
+// TODO:
+// Include `properties`
 fn parse_layer(t: &Tag) -> Layer {
     Layer {
         id: get_parse(&t.attributes, "id").unwrap(),
         name: t.attributes.get("name").unwrap().clone(),
-        visible: get_parse(&t.attributes, "visible").unwrap(),
-        opacity: get_parse(&t.attributes, "opacity").unwrap(),
+        visible: (get_parse::<u8>(&t.attributes, "visible").unwrap_or(1) == 1),
+        opacity: get_parse(&t.attributes, "opacity").unwrap_or(1.),
         parallax: (
-            get_parse(&t.attributes, "parallaxx").unwrap(),
-            get_parse(&t.attributes, "parallaxy").unwrap(),
+            get_parse(&t.attributes, "parallaxx").unwrap_or(1.),
+            get_parse(&t.attributes, "parallaxy").unwrap_or(1.),
         ),
-        repeatx: get_parse(&t.attributes, "repeatx").unwrap(),
-        repeaty: get_parse(&t.attributes, "repeaty").unwrap(),
+        // TODO:
+        // This is probably actually a `1` or `0`, like "visible"
+        repeatx: get_parse(&t.attributes, "repeatx").unwrap_or(false),
+        repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
     }
 }
