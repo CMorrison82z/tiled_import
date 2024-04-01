@@ -108,7 +108,7 @@ pub struct Layer {
 
 #[derive(Debug)]
 pub enum TiledLayer {
-    Tile(Layer, Vec<LayerTile>),
+    Tile(Layer, Vec<Option<LayerTile>>),
     Object(Layer, Vec<Object>),
     Image(Layer, Image),
     Group(Layer)

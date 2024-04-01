@@ -179,7 +179,7 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     }
 }
 
-fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Vec<LayerTile> {
+fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Vec<Option<LayerTile>> {
     let Xml::Element(t, Some(c)) = x else {panic!()};
 
     let Some(Xml::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {panic!("Only csv is supported")};
@@ -187,7 +187,7 @@ fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Vec<LayerTile> {
     // TODO:
     // Parse text into vec<gid>
 
-    parse_tiles_csv(s.as_str()).unwrap().iter().filter_map(|gid| parse_tile_from_gid(v, gid)).collect() }
+    parse_tiles_csv(s.as_str()).unwrap().iter().map(|gid| parse_tile_from_gid(v, gid)).collect() }
 
 // NOTE:
 // Maybe use later to support xml elements, but probably not...
@@ -206,6 +206,8 @@ fn parse_tile_from_gid(tilesets: &Vec<TileSet>, bits: &u32) -> Option<LayerTile>
     let flip_d = flags & FLIPPED_DIAGONALLY_FLAG == FLIPPED_DIAGONALLY_FLAG; // Swap x and y axis (anti-diagonally) [flips over y = -x line]
     let flip_h = flags & FLIPPED_HORIZONTALLY_FLAG == FLIPPED_HORIZONTALLY_FLAG; // Flip tile over y axis
     let flip_v = flags & FLIPPED_VERTICALLY_FLAG == FLIPPED_VERTICALLY_FLAG; // Flip tile over x axis
+
+    println!("{:?}", gid);
 
     if gid == Gid::EMPTY {
         None
