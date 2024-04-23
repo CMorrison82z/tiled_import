@@ -1,3 +1,4 @@
+use ndarray::Array2;
 use nom::{
     bytes::complete::*,
     character::complete::*,
@@ -38,7 +39,13 @@ pub(crate) fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     ))(i)
 }
 
+pub(crate) fn parse_tiles_csv<'a>(i: &'a str) -> Result<Array2<u32>, nom::Err<(&str, ErrorKind)>> {
+    csv_root::<(&str, ErrorKind)>(i).map(|(_, x)| {
+        // TODO:
+        // More robust way of determining the newline character
+        // For now, just dividing by 2 (because the separator character `,` is a character)
+        let columns = i.find('\n').unwrap() / 2;
 
-pub(crate) fn parse_tiles_csv<'a>(i: &'a str) -> Result<Vec<u32>, nom::Err<(&str, ErrorKind)>> {
-    csv_root::<(&str, ErrorKind)>(i).map(|(_, x)| x)
+        ndarray::Array2::from_shape_vec((columns, x.len() / columns ), x).unwrap()
+    })
 }

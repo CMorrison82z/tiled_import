@@ -2,6 +2,7 @@ use std::{
     borrow::Borrow, collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf, str::FromStr,
 };
 
+use ndarray::Array2;
 use nom_xml::{
     types::{Tag, Xml},
     *,
@@ -49,11 +50,13 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
 
     let first_gid = get_parse::<u32>(&t.attributes, "firstgid").unwrap();
 
-    Some(TileSet {
-        tile_size: (
+    let tile_size = (
             get_parse::<u32>(&t.attributes, "tilewidth").unwrap(),
             get_parse::<u32>(&t.attributes, "tileheight").unwrap(),
-        ),
+        );
+
+    Some(TileSet {
+        tile_size,
         first_gid,
         name: t.attributes.get("name").unwrap().clone(),
         margin: get_parse::<u8>(&t.attributes, "margin").unwrap_or(0),
@@ -64,7 +67,7 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
             .map(|xml_element| match xml_element {
                 Xml::Element(img_tag, _) => Image {
                     source: img_tag.attributes.get("source").unwrap().into(),
-                    // size: (get_parse::<u32>(img_tag.attributes, "width").unwrap(), get_parse::<u32>(img_tag.attributes, "height").unwrap()),
+                    dimensions: (get_parse::<u32>(&img_tag.attributes, "width").unwrap() / tile_size.0, get_parse::<u32>(&img_tag.attributes, "height").unwrap() / tile_size.1),
                     format: img_tag.attributes.get("format").unwrap_or(&"png".into()).clone(),
                 },
                 _ => unreachable!(), // This will panic if Xml::Element is not matched
@@ -179,7 +182,7 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     }
 }
 
-fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Vec<Option<LayerTile>> {
+fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Array2<Option<LayerTile>> {
     let Xml::Element(t, Some(c)) = x else {panic!()};
 
     let Some(Xml::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {panic!("Only csv is supported")};
@@ -187,7 +190,8 @@ fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Vec<Option<LayerTile>> {
     // TODO:
     // Parse text into vec<gid>
 
-    parse_tiles_csv(s.as_str()).unwrap().iter().map(|gid| parse_tile_from_gid(v, gid)).collect() }
+    parse_tiles_csv(s.as_str()).unwrap().map(|gid| parse_tile_from_gid(v, gid))
+}
 
 // NOTE:
 // Maybe use later to support xml elements, but probably not...

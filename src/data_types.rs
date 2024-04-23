@@ -1,5 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use ndarray::Array2;
+
 pub type ID = u32;
 
 pub type PairU32 = (u32, u32);
@@ -108,7 +110,7 @@ pub struct Layer {
 
 #[derive(Debug)]
 pub enum TiledLayer {
-    Tile(Layer, Vec<Option<LayerTile>>),
+    Tile(Layer, Array2<Option<LayerTile>>),
     Object(Layer, Vec<Object>),
     Image(Layer, Image),
     Group(Layer)
@@ -117,7 +119,7 @@ pub enum TiledLayer {
 #[derive(Debug)]
 pub struct Image {
     pub source: PathBuf,
-    // pub size: PairU32,
+    pub dimensions: PairU32,
     pub format: String,
     // color: Color
 }
