@@ -101,7 +101,12 @@ dependencies = [
  "ndarray",
  "nom",
  "nom_xml",
+ "tree",
 ]
+
+[[package]]
+name = "tree"
+version = "0.1.0"
 
 [[package]]
 name = "xml-rs"

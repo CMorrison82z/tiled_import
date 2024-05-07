@@ -145,11 +145,11 @@ where
 fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     match x {
         Xml::Element(t, Some(c)) => match t.value.as_str() {
-            "group" => Some(LayerHierarchy::Children(
+            "group" => Some(LayerHierarchy::Node(
                 TiledLayer::Group(parse_layer(t)),
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
-            "map" => Some(LayerHierarchy::Children(
+            "map" => Some(LayerHierarchy::Node(
                 TiledLayer::Group(Layer {
                     id: 0,
                     name: "base".into(),
@@ -164,15 +164,15 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
             // } else {
             //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
             // }),
-            "objectgroup" => Some(LayerHierarchy::Layer(TiledLayer::Object(
+            "objectgroup" => Some(LayerHierarchy::Leaf(TiledLayer::Object(
                 parse_layer(t),
                 c.iter().filter_map(object_parse).collect(),
             ))),
-            "layer" => Some(LayerHierarchy::Layer(TiledLayer::Tile(
+            "layer" => Some(LayerHierarchy::Leaf(TiledLayer::Tile(
                 parse_layer(t),
                 grid_parse(v, c.iter().find(|x| if let Xml::Element(t, _) = x {t.value == "data"} else {false}).unwrap())
             ))),
-            "imagelayer" => Some(LayerHierarchy::Layer(TiledLayer::Image(
+            "imagelayer" => Some(LayerHierarchy::Leaf(TiledLayer::Image(
                 parse_layer(t),
                 todo!(),
             ))),

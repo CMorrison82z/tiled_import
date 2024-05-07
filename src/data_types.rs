@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use ndarray::Array2;
+use tree::Tree;
 
 pub type ID = u32;
 
@@ -72,7 +73,7 @@ pub struct Tile(pub ID);
 //     pub properties: Option<Properties>
 // }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LayerTile {
     pub tile: Tile,
     pub flip_h: bool,
@@ -80,7 +81,7 @@ pub struct LayerTile {
     pub flip_d: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Object {
     pub id: ID,
     // pub tile_type: String,
@@ -91,7 +92,7 @@ pub struct Object {
     pub visible: bool
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Layer {
     pub id: ID,
     pub name: String,
@@ -108,7 +109,7 @@ pub struct Layer {
 }
 
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TiledLayer {
     Tile(Layer, Array2<Option<LayerTile>>),
     Object(Layer, Vec<Object>),
@@ -116,7 +117,7 @@ pub enum TiledLayer {
     Group(Layer)
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Image {
     pub source: PathBuf,
     pub dimensions: PairU32,
@@ -138,11 +139,7 @@ pub struct TileSet {
     pub tiles: Vec<Tile>
 }
 
-#[derive(Debug)]
-pub enum LayerHierarchy {
-    Layer(TiledLayer),
-    Children(TiledLayer, Vec<LayerHierarchy>)
-}
+pub type LayerHierarchy = Tree<TiledLayer>;
 
 #[derive(Debug)]
 pub struct TiledMap {

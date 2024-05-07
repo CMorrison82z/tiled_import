@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nom_xml = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/nom_xml" }
+nom_xml = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/Mine/nom_xml" }
+tree = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/Mine/my_lib/crates/tree" }
 nom = "7.1.3"
 ndarray = "0.15.6"

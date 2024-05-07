@@ -40,12 +40,13 @@ pub(crate) fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
 }
 
 pub(crate) fn parse_tiles_csv<'a>(i: &'a str) -> Result<Array2<u32>, nom::Err<(&str, ErrorKind)>> {
-    csv_root::<(&str, ErrorKind)>(i).map(|(_, x)| {
-        // TODO:
-        // More robust way of determining the newline character
-        // For now, just dividing by 2 (because the separator character `,` is a character)
-        let columns = i.find('\n').unwrap() / 2;
+    let columns = i.lines().next().unwrap().chars().filter(|c| *c == ',').count();
 
-        ndarray::Array2::from_shape_vec((columns, x.len() / columns ), x).unwrap()
+    csv_root::<(&str, ErrorKind)>(i).map(|(_, x)| {
+        println!("RESULT PARSE {:?}", x);
+
+        // TODO:
+        // Why does flipping column work ???
+        ndarray::Array2::from_shape_vec((x.len() / columns, columns ), x).unwrap().reversed_axes()
     })
 }
