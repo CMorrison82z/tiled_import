@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.1" orientation="orthogonal" renderorder="right-down" width="50" height="14" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="1">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="50" height="14" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="1">
  <tileset firstgid="1" name="BasicHabitatTileSheet16by16" tilewidth="16" tileheight="16" tilecount="35" columns="7">
   <image source="BasicHabitatTileSheet16by16.png" width="112" height="80"/>
+  <tile id="8">
+   <properties>
+    <property name="test" type="int" value="100"/>
+   </properties>
+  </tile>
  </tileset>
  <tileset firstgid="36" name="Planet16bitscaled" tilewidth="16" tileheight="16" tilecount="2280" columns="60">
   <image source="Planet16bitscaled.png" width="960" height="608"/>
