@@ -10,3 +10,9 @@ nom_xml = { path = "/home/chris/Documents/Create/Software/Language/Rust/Reposito
 tree = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/Mine/my_lib/crates/tree" }
 nom = "7.1.3"
 ndarray = "0.15.6"
+bevy = {version = "0.13.2", features = [
+  "bevy_asset",
+  "bevy_sprite",
+  "png",
+
+]}
