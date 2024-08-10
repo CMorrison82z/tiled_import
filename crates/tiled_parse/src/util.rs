@@ -16,6 +16,10 @@ fn whitespace<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a st
     take_while(move |c| " \t\r\n".contains(c))(i)
 }
 
+fn whitespace1<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+    take_while1(move |c| " \t\r\n".contains(c))(i)
+}
+
 fn u32_parse<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, u32, E> {
     // TODO:
     // Don't unwrap
@@ -40,8 +44,8 @@ pub fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
 pub fn spaced_f32_pairs<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<PairF32>, E> {
-    cut(separated_list1(
-        whitespace,
+    cut(separated_list0(
+        whitespace1,
         separated_pair(f32_parse, char(','), f32_parse),
     ))(i)
 }

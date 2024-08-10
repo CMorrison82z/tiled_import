@@ -11,35 +11,9 @@ use bevy::sprite::TextureAtlasLayout;
 use bevy::transform::components::{GlobalTransform, Transform};
 use bevy::utils::hashbrown::HashMap;
 
-use crate::data_types::*;
-use crate::parse::parse;
-
-#[derive(TypePath, Asset)]
-pub struct TiledMapAsset {
-    pub map: TiledMap,
-
-    // TODO:
-    // pub colliders: todo!(),
-    pub tilemap_textures: HashMap<usize, Handle<bevy::prelude::Image>>,
-    pub tilemap_atlases: HashMap<usize, Handle<TextureAtlasLayout>>,
-}
-
-// Stores a list of tiled layers.
-#[derive(Component, Default)]
-pub struct TiledLayersStorage {
-    pub storage: HashMap<u32, Entity>,
-}
-
-// TODO:
-// I'm not sure that I want to have the crate commit to this instance implementation...
-// For example, GPU rendering would be more efficient (like `bevy_ecs_tilemap`)
-#[derive(Default, Bundle)]
-pub struct TiledMapBundle {
-    pub tiled_map: Handle<TiledMapAsset>,
-    pub storage: TiledLayersStorage,
-    pub transform: Transform,
-    pub global_transform: GlobalTransform,
-}
+use crate::types::TiledMapAsset;
+use tiled_parse::data_types::*;
+use tiled_parse::parse::*;
 
 /// Allows us to do `AssetServer.load("MY_MAP.tmx")`
 pub struct TiledLoader;
@@ -77,8 +51,8 @@ impl AssetLoader for TiledLoader {
                 tile_sets,
             } = &tm;
 
-            let mut tilemap_textures = HashMap::default();
-            let mut tilemap_atlases = HashMap::default();
+            let mut tilemap_textures = Vec::with_capacity(tile_sets.len());
+            let mut tilemap_atlases = Vec::with_capacity(tile_sets.len());
 
             tile_sets.iter().enumerate().for_each(|(ind, ts)| {
                 let TileSet {
@@ -92,7 +66,7 @@ impl AssetLoader for TiledLoader {
                 } = ts;
 
                 images.iter().for_each(|i| {
-                    let crate::data_types::Image {
+                    let tiled_parse::data_types::Image {
                         source,
                         format,
                         dimensions: (columns, rows),
@@ -131,8 +105,8 @@ impl AssetLoader for TiledLoader {
                             ),
                         );
 
-                    tilemap_textures.insert(ind, texture_handle);
-                    tilemap_atlases.insert(ind, texture_atlas);
+                    tilemap_textures.push(texture_handle);
+                    tilemap_atlases.push(texture_atlas);
                 });
             });
 

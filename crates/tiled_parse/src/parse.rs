@@ -273,35 +273,34 @@ fn object_parse(x: &Xml) -> Option<Object> {
         id: get_parse(&t.attributes, "id").unwrap(),
         // tile_type: get_parse(&t.attributes, "id").unwrap(),
         position: (
-            get_parse::<u32>(&t.attributes, "x").unwrap(),
-            get_parse::<u32>(&t.attributes, "y").unwrap(),
+            get_parse::<f32>(&t.attributes, "x").unwrap(),
+            get_parse::<f32>(&t.attributes, "y").unwrap(),
         ),
-        size: (
-            get_parse::<u32>(&t.attributes, "width").unwrap(),
-            get_parse::<u32>(&t.attributes, "height").unwrap(),
-        ),
-        rotation: get_parse(&t.attributes, "rotation").unwrap(),
+        size: get_parse::<f32>(&t.attributes, "width").and_then(|width| {
+            get_parse::<f32>(&t.attributes, "height").map(|height| (width, height))
+        }),
+        rotation: get_parse(&t.attributes, "rotation").unwrap_or_default(),
         // NOTE:
         // This actually highlights a shortcoming of converting and flattening the Result to an
         // Option.
         // We no longer know if it failed to parse due to a parse error, or if the field was
         // missing.
         tile_global_id: get_parse(&t.attributes, "gid"),
-        visible: (get_parse::<u8>(&t.attributes, "visible").unwrap() == 1),
+        visible: (get_parse::<u8>(&t.attributes, "visible").unwrap_or(1) == 1),
         otype: match c {
             Some(v) => {
                 if let Some(Xml::Element(o_t, _)) = v.get(0) {
                     match o_t.value.as_str() {
                         "ellipse" => ObjectType::Ellipse,
                         "point" => ObjectType::Point,
-                        "polygon" => ObjectType::Polygon(
+                        "polygon" => ObjectType::Polygon({
                             parse_spaced_f32_pairs(
                                 o_t.attributes
                                     .get("points")
                                     .expect("Polygon should have `points` attribute."),
                             )
-                            .unwrap(),
-                        ),
+                            .unwrap()
+                        }),
                         "polyline" => ObjectType::Polyline(
                             parse_spaced_f32_pairs(
                                 o_t.attributes

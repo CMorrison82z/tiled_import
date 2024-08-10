@@ -94,8 +94,8 @@ pub struct LayerTile {
 pub struct Object {
     pub id: ID,
     // pub tile_type: String,
-    pub position: PairU32,
-    pub size: PairU32,
+    pub position: PairF32,
+    pub size: Option<PairF32>,
     pub rotation: f32,
     // If the object is attached to a Tile, this field will exist.
     pub tile_global_id: Option<Gid>,

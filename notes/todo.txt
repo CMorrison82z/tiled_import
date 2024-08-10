@@ -1,3 +1,6 @@
 ## TODO ##
 - Write Bevy asset loader.
+  - Load colliders
+  - Handle `on_loaded`. See my sheep game `on_load_tmx` function for more details. Note that that implementation
+    is also very rough and not well thought out.
 

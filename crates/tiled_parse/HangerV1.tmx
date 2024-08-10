@@ -5,6 +5,7 @@
   <tile id="8">
    <properties>
     <property name="test" type="int" value="100"/>
+    <property name="anotha" type="bool" value="false"/>
    </properties>
   </tile>
   <tile id="18">
@@ -21,7 +22,7 @@
   </tile>
   <tile id="22">
    <objectgroup draworder="index" id="2">
-    <object id="1" x="8" y="8">
+    <object id="1" x="7.43409" y="5.81721" width="5.25486" height="6.62921">
      <ellipse/>
     </object>
    </objectgroup>
