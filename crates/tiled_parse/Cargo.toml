@@ -1,0 +1,24 @@
+[package]
+name = "tiled_parse"
+version = "0.1.0"
+edition = "2021"
+description = "Main sample sub-crate"
+
+# authors.workspace = true
+# edition.workspace = true
+# license.workspace = true
+# rust-version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ndarray.workspace = true
+tree.workspace = true
+nom = "7.1.3"
+nom_xml = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/Mine/nom_xml" }
+# my-dependency.workspace = true
+# other-dev-dependency = "0.1.2"
+
+# [dev-dependencies]
+# my-dependency.workspace = true
+# other-dev-dependency = "1.4.0"

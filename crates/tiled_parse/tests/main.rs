@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use tiled_import::parse::{self, *};
+use tiled_parse::parse::{self, *};
 
 #[test]
 fn parse_tmx() {
