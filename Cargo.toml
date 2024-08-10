@@ -18,10 +18,5 @@ authors = ["my team"]
 tiled_parse = { path = "crates/tiled_parse", version = "0.0.0" }
 bevy_tiled_loader = { path = "crates/bevy_tiled_loader", version = "0.0.0" }
 
-# local crates that aren't published to crates.io. These should not have versions.
-my_lib = { path = "crates/my_lib" }
-
-# non-local crates
-
 ndarray = "0.15.6"
 tree = { path = "/home/chris/Documents/Create/Software/Language/Rust/Repository/Mine/my_lib/crates/tree" }
