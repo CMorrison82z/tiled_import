@@ -13,6 +13,12 @@ description = "Asset loader for the Tiled data parsed."
 
 [dependencies]
 tiled_parse.workspace = true
+bevy = {version = "0.13.2", features = [
+  "bevy_asset",
+  "bevy_sprite",
+  "png",
+
+]}
 # my-dependency.workspace = true
 # other-dev-dependency = "0.1.2"
 
