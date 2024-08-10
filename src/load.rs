@@ -86,7 +86,7 @@ impl AssetLoader for TiledLoader {
                     spacing,
                     margin,
                     images,
-                    tiles,
+                    tile_stuff,
                 } = ts;
 
                 images.iter().for_each(|i| {

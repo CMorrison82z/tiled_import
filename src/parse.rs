@@ -8,7 +8,10 @@ use nom_xml::{
     *,
 };
 
-use crate::{data_types::*, util::parse_tiles_csv};
+use crate::{
+    data_types::*,
+    util::{parse_spaced_f32_pairs, parse_tiles_csv},
+};
 
 pub fn parse<'a>(i: &'a str) -> Result<TiledMap, ()> {
     let tmx_root = Xml::from_input_str(i).unwrap();
@@ -51,9 +54,9 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
     let first_gid = get_parse::<u32>(&t.attributes, "firstgid").unwrap();
 
     let tile_size = (
-            get_parse::<u32>(&t.attributes, "tilewidth").unwrap(),
-            get_parse::<u32>(&t.attributes, "tileheight").unwrap(),
-        );
+        get_parse::<u32>(&t.attributes, "tilewidth").unwrap(),
+        get_parse::<u32>(&t.attributes, "tileheight").unwrap(),
+    );
 
     Some(TileSet {
         tile_size,
@@ -67,16 +70,21 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
             .map(|xml_element| match xml_element {
                 Xml::Element(img_tag, _) => Image {
                     source: img_tag.attributes.get("source").unwrap().into(),
-                    dimensions: (get_parse::<u32>(&img_tag.attributes, "width").unwrap() / tile_size.0, get_parse::<u32>(&img_tag.attributes, "height").unwrap() / tile_size.1),
-                    format: img_tag.attributes.get("format").unwrap_or(&"png".into()).clone(),
+                    dimensions: (
+                        get_parse::<u32>(&img_tag.attributes, "width").unwrap() / tile_size.0,
+                        get_parse::<u32>(&img_tag.attributes, "height").unwrap() / tile_size.1,
+                    ),
+                    format: img_tag
+                        .attributes
+                        .get("format")
+                        .unwrap_or(&"png".into())
+                        .clone(),
                 },
                 _ => unreachable!(), // This will panic if Xml::Element is not matched
             })
             .collect(),
-        tiles: (0..(get_parse::<u32>(&t.attributes, "tilecount").unwrap())).map(|i| Tile(first_gid + i)).collect()
-        // TODO:
-        // Individual time-elements are only if the tilset is based off of multiple images...
-        // Otherwise, we need to iterate and give everything and ID ourselves.
+        // Individual tile-elements are only if the tilset is based off of multiple images...
+        // Otherwise, we need to iterate and give everything an ID ourselves.
         // tiles: e
         //     .iter()
         //     .filter(|x| x.tag_has_name("tile"))
@@ -132,8 +140,6 @@ fn parse_tmx_property(x: &Xml) -> (String, TiledPropertyType) {
     )
 }
 
-// TODO:
-// Return a flattened Result
 fn get_parse<T>(hm: &HashMap<String, String>, field: &str) -> Option<T>
 where
     T: FromStr,
@@ -156,26 +162,35 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                     visible: true,
                     opacity: 1.,
                     parallax: (0., 0.),
-                    repeatx: false,
-                    repeaty: false,
                 }),
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
             // } else {
             //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
             // }),
-            "objectgroup" => Some(LayerHierarchy::Leaf(TiledLayer::Object(
-                parse_layer(t),
+            "objectgroup" => Some(LayerHierarchy::Leaf(TiledLayer::Object(parse_layer(
+                t,
                 c.iter().filter_map(object_parse).collect(),
-            ))),
-            "layer" => Some(LayerHierarchy::Leaf(TiledLayer::Tile(
-                parse_layer(t),
-                grid_parse(v, c.iter().find(|x| if let Xml::Element(t, _) = x {t.value == "data"} else {false}).unwrap())
-            ))),
-            "imagelayer" => Some(LayerHierarchy::Leaf(TiledLayer::Image(
-                parse_layer(t),
+            )))),
+            "layer" => Some(LayerHierarchy::Leaf(TiledLayer::Tile(parse_layer(
+                t,
+                grid_parse(
+                    v,
+                    c.iter()
+                        .find(|x| {
+                            if let Xml::Element(t, _) = x {
+                                t.value == "data"
+                            } else {
+                                false
+                            }
+                        })
+                        .unwrap(),
+                ),
+            )))),
+            "imagelayer" => Some(LayerHierarchy::Leaf(TiledLayer::Image(parse_layer(
+                t,
                 todo!(),
-            ))),
+            )))),
             _ => None,
         },
         _ => None,
@@ -183,20 +198,26 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
 }
 
 fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Array2<Option<LayerTile>> {
-    let Xml::Element(t, Some(c)) = x else {panic!()};
+    let Xml::Element(t, Some(c)) = x else {
+        panic!()
+    };
 
-    let Some(Xml::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {panic!("Only csv is supported")};
+    let Some(Xml::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {
+        panic!("Only csv is supported")
+    };
 
     // TODO:
     // Parse text into vec<gid>
 
-    parse_tiles_csv(s.as_str()).unwrap().map(|gid| parse_tile_from_gid(v, gid))
+    parse_tiles_csv(s.as_str())
+        .unwrap()
+        .map(|gid| parse_tile_from_gid(v, gid))
 }
 
 // NOTE:
 // Maybe use later to support xml elements, but probably not...
 fn parse_tile(tilesets: &Vec<TileSet>, x: &Xml) -> Option<LayerTile> {
-    let Xml::Element(t, _) = x else {return None};
+    let Xml::Element(t, _) = x else { return None };
 
     let bits: u32 = t.attributes.get("gid").unwrap().parse().unwrap();
 
@@ -214,13 +235,8 @@ fn parse_tile_from_gid(tilesets: &Vec<TileSet>, bits: &u32) -> Option<LayerTile>
     if gid == Gid::EMPTY {
         None
     } else {
-        let tileset = crate::util::get_tileset_for_gid(tilesets, gid)?;
-        let id = gid.0 - tileset.first_gid;
-
-        let tile = (tileset.tiles.iter().find(|Tile(t_id)| *t_id == id)?).clone();
-
         Some(LayerTile {
-            tile,
+            tile: gid,
             flip_h,
             flip_v,
             flip_d,
@@ -229,11 +245,13 @@ fn parse_tile_from_gid(tilesets: &Vec<TileSet>, bits: &u32) -> Option<LayerTile>
 }
 
 fn object_parse(x: &Xml) -> Option<Object> {
-    let Xml::Element(t, _) = x else { return None };
+    let Xml::Element(t, c) = x else { return None };
 
     if t.value != "object" {
         return None;
     };
+
+    println!("{:?}", x);
 
     Some(Object {
         id: get_parse(&t.attributes, "id").unwrap(),
@@ -247,14 +265,50 @@ fn object_parse(x: &Xml) -> Option<Object> {
             get_parse::<u32>(&t.attributes, "height").unwrap(),
         ),
         rotation: get_parse(&t.attributes, "rotation").unwrap(),
-        tile_global_id: get_parse(&t.attributes, "gid").unwrap(),
+        // NOTE:
+        // This actually highlights a shortcoming of converting and flattening the Result to an
+        // Option.
+        // We no longer know if it failed to parse due to a parse error, or if the field was
+        // missing.
+        tile_global_id: get_parse(&t.attributes, "gid"),
         visible: (get_parse::<u8>(&t.attributes, "visible").unwrap() == 1),
+        otype: match c {
+            Some(v) => {
+                if let Some(Xml::Element(o_t, _)) = v.get(0) {
+                    match o_t.value.as_str() {
+                        "ellipse" => ObjectType::Ellipse,
+                        "point" => ObjectType::Point,
+                        "polygon" => ObjectType::Polygon(
+                            parse_spaced_f32_pairs(
+                                o_t.attributes
+                                    .get("points")
+                                    .expect("Polygon should have `points` attribute."),
+                            )
+                            .unwrap(),
+                        ),
+                        "polyline" => ObjectType::Polyline(
+                            parse_spaced_f32_pairs(
+                                o_t.attributes
+                                    .get("points")
+                                    .expect("Polyline should have `points` attribute."),
+                            )
+                            .unwrap(),
+                        ),
+                        _ => unreachable!("First element's tag was expected to be an ObjectType"),
+                    }
+                } else {
+                    unreachable!("Object type should be a Xml Element")
+                }
+            }
+            None => ObjectType::Rectangle,
+        }, // If there is no object type in the xml, it's a Rectangle
+        properties: HashMap::new(),
     })
 }
 
 // TODO:
 // Include `properties`
-fn parse_layer(t: &Tag) -> Layer {
+fn parse_layer<T>(t: &Tag, content: T) -> Layer<T> {
     Layer {
         id: get_parse(&t.attributes, "id").unwrap(),
         name: t.attributes.get("name").unwrap().clone(),
@@ -264,9 +318,9 @@ fn parse_layer(t: &Tag) -> Layer {
             get_parse(&t.attributes, "parallaxx").unwrap_or(1.),
             get_parse(&t.attributes, "parallaxy").unwrap_or(1.),
         ),
-        // TODO:
-        // This is probably actually a `1` or `0`, like "visible"
-        repeatx: get_parse(&t.attributes, "repeatx").unwrap_or(false),
-        repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
+        content, // TODO:
+                 // This is probably actually a `1` or `0`, like "visible"
+                 // repeatx: get_parse(&t.attributes, "repeatx").unwrap_or(false),
+                 // repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
     }
 }

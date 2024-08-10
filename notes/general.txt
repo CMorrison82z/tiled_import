@@ -1,3 +1,16 @@
+REFER TO JSON DOCS ! https://doc.mapeditor.org/en/stable/reference/json-map-format/
+
+The `tmx` file is really supposed to be for the editor, not for ingesting into the game...
+(Ex. `.blend` is a project file, but the model is the exported `glb`, etc.)
+
+- Tile collision shapes are placed into an embedded layer `objectgroup`. It's not clear
+  how this relates to other layers. It seems to ignore the Object ID increment
+  scheme that takes place with objects in an `objectgroup` place on the map.
+  Also, the ID of the embedded `objectgroup` itself is not clear what it relates to.
+
+Cannot use a closure for making `get_parse` shorter and less repetitive because Rust closures can't
+be generic ! :)
+
 ## TODO ##
 - Tiled doesn't seem to use a string for booleans, instead uses `1` or `0`. We must account for this when parsing (See an example for `visible`)
 - Parse object details, propreties, etc. from Tiles in a TileSet (current just maps an ID using `tiltcount`)

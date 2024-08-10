@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use ndarray::Array2;
 use tree::Tree;
@@ -11,7 +11,15 @@ pub type PairF32 = (f32, f32);
 pub type Properties = HashMap<String, TiledPropertyType>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct Gid(pub u32);
+pub struct Gid(pub u32);
+
+impl FromStr for Gid {
+    type Err = std::num::ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<u32>().map(|v| Gid(v))
+    }
+}
 
 impl Gid {
     /// The GID representing an empty tile in the map.
@@ -43,6 +51,7 @@ pub enum TiledPropertyType {
 
 #[derive(Debug, Clone)]
 pub enum ObjectType {
+    Rectangle, // The existing x, y, width and height attributes are used to determine the size.
     Ellipse, // The existing x, y, width and height attributes are used to determine the size of the ellipse.
     Point,   // The existing x and y attributes are used to determine the position of the point.
     Polygon(Vec<PairF32>), // The origin for these coordinates is the location of the parent
@@ -57,14 +66,6 @@ pub struct Color {
     pub blue: u8,
 }
 
-#[derive(Debug)]
-pub enum Shape {
-    Ellipse(PairU32),       // Pair represents the size
-    Point(PairU32),         // Pair represents the position
-    Polygon(Vec<PairU32>),  // Pair represents the position
-    Polyline(Vec<PairU32>), // Pair represents the position
-}
-
 // pub struct Text {
 //     fontfamily: String,
 //     pixel_size: u32,
@@ -72,8 +73,6 @@ pub enum Shape {
 //     color:
 // }
 
-#[derive(Clone, Copy, Debug)]
-pub struct Tile(pub ID);
 // pub struct Tile {
 //     // pub global_id: ID,
 //     pub local_id: ID,
@@ -85,7 +84,7 @@ pub struct Tile(pub ID);
 
 #[derive(Clone, Copy, Debug)]
 pub struct LayerTile {
-    pub tile: Tile,
+    pub tile: Gid,
     pub flip_h: bool,
     pub flip_v: bool,
     pub flip_d: bool,
@@ -98,14 +97,15 @@ pub struct Object {
     pub position: PairU32,
     pub size: PairU32,
     pub rotation: f32,
-    pub tile_global_id: ID,
+    // If the object is attached to a Tile, this field will exist.
+    pub tile_global_id: Option<Gid>,
     pub visible: bool,
-    otype: ObjectType,
-    properties: Properties,
+    pub otype: ObjectType,
+    pub properties: Properties,
 }
 
 #[derive(Clone, Debug)]
-pub struct Layer {
+pub struct Layer<T> {
     pub id: ID,
     pub name: String,
     // pub class: String,
@@ -113,19 +113,31 @@ pub struct Layer {
     // _pos: PairU32
     // Always same as Map size
     // _size
+    pub content: T,
     pub visible: bool,
     pub opacity: f32,
     pub parallax: (f32, f32),
+}
+
+// TODO:
+// Better name :)
+#[derive(Clone, Debug)]
+pub struct ImageStuff {
     pub repeatx: bool,
     pub repeaty: bool,
+    pub image: Image,
 }
+
+pub type TileLayer = Layer<Array2<Option<LayerTile>>>;
+pub type ObjectLayer = Layer<Vec<Object>>;
+pub type ImageLayer = Layer<ImageStuff>;
 
 #[derive(Clone, Debug)]
 pub enum TiledLayer {
-    Tile(Layer, Array2<Option<LayerTile>>),
-    Object(Layer, Vec<Object>),
-    Image(Layer, Image),
-    Group(Layer),
+    Tile(TileLayer),
+    Object(ObjectLayer),
+    Image(ImageLayer),
+    Group(Layer<()>),
 }
 
 #[derive(Clone, Debug)]
@@ -133,16 +145,19 @@ pub struct Image {
     pub source: PathBuf,
     pub dimensions: PairU32,
     pub format: String,
-    // color: Color
+    // pub color: Color
 }
 
 #[derive(Debug)]
 pub struct TileAuxInfo {
-    // color: Color
     // Can contain at most one: <properties>, <image> (since 0.9), <objectgroup>, <animation>
-    // animation: ObjectGroup,
-    properties: Properties,
-    objectgroup: Vec<Object>,
+    // pub color: Color,
+    // pub animation: ObjectGroup,
+    pub properties: Properties,
+    // NOTE:
+    // Departure from Tiled's file specification. Encoding the objects as an entire layer is
+    // wasteful and unhelpful.
+    pub objectgroup: Vec<Object>,
 }
 
 #[derive(Debug)]
@@ -156,12 +171,8 @@ pub struct TileSet {
     // Removed for now because it's better to rely on `first_gid`
     // tile_count: u32,
     pub images: Vec<Image>,
-    // I think this still needs to exist because some IDs may disappear when updating the
-    // underlying tileset.
-    // TODO:
-    // Do we want it to be HashSet? Vecs are more space efficient.
-    pub tiles: Vec<Tile>,
-    pub tile_stuff: HashMap<Tile, TileAuxInfo>,
+    // This u32 is the LOCAL id of the tile (relative to this tileset)
+    pub tile_stuff: HashMap<u32, TileAuxInfo>,
 }
 
 pub type LayerHierarchy = Tree<TiledLayer>;
