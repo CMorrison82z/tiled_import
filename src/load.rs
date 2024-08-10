@@ -18,6 +18,8 @@ use crate::parse::parse;
 pub struct TiledMapAsset {
     pub map: TiledMap,
 
+    // TODO:
+    // pub colliders: todo!(),
     pub tilemap_textures: HashMap<usize, Handle<bevy::prelude::Image>>,
     pub tilemap_atlases: HashMap<usize, Handle<TextureAtlasLayout>>,
 }
@@ -122,8 +124,10 @@ impl AssetLoader for TiledLoader {
                                 Vec2::new(tile_size.0 as f32, tile_size.1 as f32),
                                 *columns as usize,
                                 *rows as usize,
-                                None,
-                                None,
+                                // TODO:
+                                // I'm not sure this translates correctly
+                                Some((*spacing as f32) * Vec2::ONE),
+                                Some((*margin as f32) * Vec2::ONE),
                             ),
                         );
 

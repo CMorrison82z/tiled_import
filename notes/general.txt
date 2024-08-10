@@ -11,7 +11,3 @@ The `tmx` file is really supposed to be for the editor, not for ingesting into t
 Cannot use a closure for making `get_parse` shorter and less repetitive because Rust closures can't
 be generic ! :)
 
-## TODO ##
-- Tiled doesn't seem to use a string for booleans, instead uses `1` or `0`. We must account for this when parsing (See an example for `visible`)
-- Parse object details, propreties, etc. from Tiles in a TileSet (current just maps an ID using `tiltcount`)
-
