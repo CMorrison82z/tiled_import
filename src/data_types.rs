@@ -157,7 +157,7 @@ pub struct TileAuxInfo {
     // NOTE:
     // Departure from Tiled's file specification. Encoding the objects as an entire layer is
     // wasteful and unhelpful.
-    pub objectgroup: Vec<Object>,
+    pub objects: Vec<Object>,
 }
 
 #[derive(Debug)]

@@ -85,33 +85,50 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
             .collect(),
         // Individual tile-elements are only if the tilset is based off of multiple images...
         // Otherwise, we need to iterate and give everything an ID ourselves.
-        // tiles: e
-        //     .iter()
-        //     .filter(|x| x.tag_has_name("tile"))
-        //     .map(|xml_element| match xml_element {
-        //         Xml::Element(tile_tag, tile_elems) => Tile {
-        //             local_id: get_parse(&tile_tag.attributes, "id").unwrap(),
-        //             sub_rect_size: (
-        //                 get_parse::<u32>(&t.attributes, "width").unwrap(),
-        //                 get_parse::<u32>(&t.attributes, "height").unwrap(),
-        //             ),
-        //             sub_rect_position: (
-        //                 get_parse::<u32>(&t.attributes, "x").unwrap(),
-        //                 get_parse::<u32>(&t.attributes, "y").unwrap(),
-        //             ),
-        //             properties: tile_elems
-        //                 .as_ref()
-        //                 .map(|v| parse_tmx_properties(&v))
-        //                 .flatten(),
-        //         },
-        //         _ => unreachable!(),
-        //     })
-        //     .collect(),
+        tile_stuff: e
+            .iter()
+            .filter_map(|x| {
+                if !x.tag_has_name("tile") {
+                    return None;
+                };
+                let Xml::Element(tile_tag, Some(tile_elems)) = x else {
+                    return None;
+                };
+                let id = get_parse::<u32>(&tile_tag.attributes, "id")?;
+                let properties = parse_tmx_properties(x).unwrap_or_default();
+                let objects = tile_elems
+                    .iter()
+                    .find(|t_e| t_e.tag_has_name("objectgroup"))
+                    .and_then(|ogroup_xml| match ogroup_xml {
+                        // NOTE:
+                        // It's necessary to wrap in a new Option like this because then `objects`
+                        // is a reference.
+                        Xml::Element(_, Some(objects)) => Some(objects),
+                        _ => None,
+                    })
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .filter_map(object_parse)
+                    .collect();
+
+                Some((
+                    id,
+                    TileAuxInfo {
+                        properties,
+                        objects,
+                    },
+                ))
+            })
+            .collect(),
     })
 }
 
-fn parse_tmx_properties(x: &Vec<Xml>) -> Option<Properties> {
-    x.iter()
+fn parse_tmx_properties(x: &Xml) -> Option<Properties> {
+    let Xml::Element(_, Some(v)) = x else {
+        return None;
+    };
+
+    v.iter()
         .find(|n_x| n_x.tag_has_name("properties"))
         .map(|xml_element| match xml_element {
             Xml::Element(_, Some(props)) => {
@@ -152,7 +169,7 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     match x {
         Xml::Element(t, Some(c)) => match t.value.as_str() {
             "group" => Some(LayerHierarchy::Node(
-                TiledLayer::Group(parse_layer(t)),
+                TiledLayer::Group(parse_layer(t, ())),
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
             "map" => Some(LayerHierarchy::Node(
@@ -162,6 +179,7 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                     visible: true,
                     opacity: 1.,
                     parallax: (0., 0.),
+                    content: (),
                 }),
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
@@ -250,8 +268,6 @@ fn object_parse(x: &Xml) -> Option<Object> {
     if t.value != "object" {
         return None;
     };
-
-    println!("{:?}", x);
 
     Some(Object {
         id: get_parse(&t.attributes, "id").unwrap(),
