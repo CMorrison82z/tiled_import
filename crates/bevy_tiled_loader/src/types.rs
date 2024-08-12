@@ -3,6 +3,7 @@ use bevy::ecs::bundle::Bundle;
 use bevy::ecs::component::Component;
 use bevy::ecs::entity::Entity;
 use bevy::reflect::TypePath;
+use bevy::scene::Scene;
 use bevy::sprite::TextureAtlasLayout;
 use bevy::transform::components::{GlobalTransform, Transform};
 use bevy::utils::hashbrown::HashMap;
@@ -17,6 +18,7 @@ pub struct TiledMapAsset {
     // pub colliders: todo!(),
     pub tilemap_textures: Vec<Handle<bevy::prelude::Image>>,
     pub tilemap_atlases: Vec<Handle<TextureAtlasLayout>>,
+    pub scene: Handle<Scene>,
 }
 
 // Stores a list of tiled layers.
