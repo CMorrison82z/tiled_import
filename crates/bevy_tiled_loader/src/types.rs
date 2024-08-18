@@ -10,6 +10,9 @@ use bevy::utils::hashbrown::HashMap;
 
 use tiled_parse::data_types::TiledMap;
 
+#[derive(Component)]
+pub struct TiledMapContainer;
+
 #[derive(TypePath, Asset)]
 pub struct TiledMapAsset {
     pub map: TiledMap,

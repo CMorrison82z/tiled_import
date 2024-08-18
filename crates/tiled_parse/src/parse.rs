@@ -1,6 +1,4 @@
-use std::{
-    borrow::Borrow, collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf, str::FromStr,
-};
+use std::{collections::HashMap, fmt::Debug, str::FromStr};
 
 use ndarray::Array2;
 use nom_xml::{
