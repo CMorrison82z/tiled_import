@@ -11,7 +11,7 @@ use bevy::math::Vec2;
 use bevy::prelude::{SpatialBundle, TransformBundle};
 use bevy::reflect::TypePath;
 use bevy::scene::Scene;
-use bevy::sprite::{SpriteBundle, TextureAtlas, TextureAtlasLayout};
+use bevy::sprite::{Anchor, Sprite, SpriteBundle, TextureAtlas, TextureAtlasLayout};
 use bevy::transform::components::{GlobalTransform, Transform};
 use bevy::utils::hashbrown::HashMap;
 
@@ -21,6 +21,8 @@ use tiled_parse::parse::*;
 
 /// Allows us to do `AssetServer.load("MY_MAP.tmx")`
 pub struct TiledLoader;
+
+pub const MAP_SCENE: &str = "MapScene";
 
 // TODO:
 // Improved error
@@ -149,35 +151,50 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                 content
                     .indexed_iter()
                     .filter_map(|(p, t)| t.map(|v| (p, v)))
-                    .for_each(|((x, y), layer_tile)| {
-                        let (x, y) = (x as f32, y as f32);
+                    .for_each(
+                        |(
+                            (x, y),
+                            LayerTile {
+                                tile: Gid(tile_gid),
+                                flip_h,
+                                flip_v,
+                                flip_d,
+                            },
+                        )| {
+                            let (x, y) = (x as f32, y as f32);
 
-                        // NOTE:
-                        // There is an assumption that it's being loaded for a 2d camera here.
+                            // NOTE:
+                            // There is an assumption that it's being loaded for a 2d camera here.
 
-                        // TODO:
-                        // Figure out why I need the additional "0.25"
-                        tile_ents.push(
-                            world
-                                .spawn((
-                                    SpriteBundle {
-                                        sprite: todo!(),
-                                        transform: todo!(),
-                                        // TODO:
-                                        // Don't just get the `0` item
-                                        texture: tilemap_textures.get(0).unwrap().clone_weak(),
-                                        ..Default::default()
-                                    },
-                                    TextureAtlas {
-                                        // TODO:
-                                        // Don't just get the `0` item
-                                        layout: tilemap_atlases.get(0).unwrap().clone(),
-                                        index: layer_tile.tile.0 as usize,
-                                    },
-                                ))
-                                .id(),
-                        );
-                    });
+                            // TODO:
+                            // Figure out why I need the additional "0.25"
+                            tile_ents.push(
+                                world
+                                    .spawn((
+                                        SpriteBundle {
+                                            sprite: Sprite {
+                                                flip_x: flip_h,
+                                                flip_y: flip_v,
+                                                anchor: Anchor::TopLeft,
+                                                ..Default::default()
+                                            },
+                                            transform: Transform::from_xyz(x, y, 0.),
+                                            // TODO:
+                                            // Don't just get the `0` item
+                                            texture: tilemap_textures.get(0).unwrap().clone_weak(),
+                                            ..Default::default()
+                                        },
+                                        TextureAtlas {
+                                            // TODO:
+                                            // Don't just get the `0` item
+                                            layout: tilemap_atlases.get(0).unwrap().clone(),
+                                            index: tile_gid as usize,
+                                        },
+                                    ))
+                                    .id(),
+                            );
+                        },
+                    );
             }
             _ => {
                 println!("Layer was not a `Tile` layer. Not currently handled.");
@@ -195,7 +212,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
         let loaded_scene = scene_load_context.finish(Scene::new(world), None);
         // TODO:
         // Figure out what to use as a label.
-        load_context.add_loaded_labeled_asset(scene_label(&scene), loaded_scene)
+        load_context.add_loaded_labeled_asset(MAP_SCENE, loaded_scene)
     };
 
     Ok(TiledMapAsset {
