@@ -62,9 +62,9 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
         name: t.attributes.get("name").unwrap().clone(),
         margin: get_parse::<u8>(&t.attributes, "margin").unwrap_or(0),
         spacing: get_parse::<u8>(&t.attributes, "spacing").unwrap_or(0),
-        images: e
+        image: e
             .iter()
-            .filter(|x| x.tag_has_name("image"))
+            .find(|x| x.tag_has_name("image"))
             .map(|xml_element| match xml_element {
                 Xml::Element(img_tag, _) => Image {
                     source: img_tag.attributes.get("source").unwrap().into(),
@@ -80,9 +80,7 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
                 },
                 _ => unreachable!(), // This will panic if Xml::Element is not matched
             })
-            .collect(),
-        // Individual tile-elements are only if the tilset is based off of multiple images...
-        // Otherwise, we need to iterate and give everything an ID ourselves.
+            .expect("Tile set should contain an image."),
         tile_stuff: e
             .iter()
             .filter_map(|x| {

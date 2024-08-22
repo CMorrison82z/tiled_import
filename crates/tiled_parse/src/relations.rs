@@ -7,6 +7,6 @@ pub fn get_tileset_for_gid(tilesets: &[TileSet], Gid(gid): Gid) -> Option<&TileS
         .max_by_key(|ts| ts.first_gid)
 }
 
-pub fn get_tild_id(TileSet { first_gid, .. }: &TileSet, Gid(gid): Gid) -> u32 {
+pub fn get_tile_id(TileSet { first_gid, .. }: &TileSet, Gid(gid): Gid) -> u32 {
     gid - first_gid
 }

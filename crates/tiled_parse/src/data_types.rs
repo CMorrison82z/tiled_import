@@ -170,7 +170,9 @@ pub struct TileSet {
     // NOTE:
     // Removed for now because it's better to rely on `first_gid`
     // tile_count: u32,
-    pub images: Vec<Image>,
+    //
+    // Only supports a single Texture Atlas. Undecided on how to represent multiple images
+    pub image: Image,
     // This u32 is the LOCAL id of the tile (relative to this tileset)
     pub tile_stuff: HashMap<u32, TileAuxInfo>,
 }
