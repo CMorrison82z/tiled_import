@@ -1,21 +1,16 @@
 [workspace]
 members = ["crates/*"]
-# default-members = ["crates/crate1"] # Set the members to operate on when in the workspace root and the package selection flags are not used
-# exclude = ["crates/crate1/i-dont-want-this"]
-resolver = "2" #NOTE: Review what resolver to use.
+resolver = "2"
 
-# TODO:
-# Update these fields.
-# See `https://doc.rust-lang.org/cargo/reference/workspaces.html` for all fields.
 [workspace.package]
 rust-version = "1.71"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-authors = ["my team"]
+authors = ["me"]
 
 [workspace.dependencies]
-# local crates
 tiled_parse = { path = "crates/tiled_parse", version = "0.0.0" }
+tree = { path = "crates/tree", version = "0.0.0" }
 bevy_tiled_loader = { path = "crates/bevy_tiled_loader", version = "0.0.0" }
 
 ndarray = "0.15.6"
