@@ -2,6 +2,7 @@ use std::fs::read_to_string;
 
 use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt, AsyncWriteExt};
 use bevy::asset::{Asset, Handle, LoadContext};
+use bevy::ecs::reflect;
 use bevy::hierarchy::BuildWorldChildren;
 use bevy::math::{UVec2, Vec2};
 use bevy::prelude::*;
@@ -15,11 +16,12 @@ use bevy::utils::hashbrown::HashMap;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
-use crate::types::{TiledMapAsset, TiledMapContainer};
+use crate::types::{SceneSerializedComponents, Serialized, TiledMapAsset, TiledMapContainer};
 use tiled_parse::data_types::*;
 use tiled_parse::parse::*;
 
 /// Allows us to do `AssetServer.load("MY_MAP.tmx")`
+#[derive(Default)]
 pub struct TiledLoader;
 
 pub const MAP_SCENE: &str = "MapScene";
@@ -110,6 +112,11 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .to_str()
             .expect("Valid utf8");
 
+        println!(
+            "tilesize : {}, {} | rowCols : {}, {} | spaceMarg : {}, {}",
+            tile_size.0, tile_size.1, rows, columns, spacing, margin
+        );
+
         // TODO:
         // I don't know if I should use "add_labeled_asset", and if the arguments are
         // conventional
@@ -138,30 +145,34 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
         let world_root_id = world.spawn(SpatialBundle::INHERITED_IDENTITY).id();
 
-        let (ghalfsize_x, ghalfsize_y) = (grid_size.0 as f32 / 2., grid_size.1 as f32 / 2.);
-
         let mut layer_ents = Vec::new();
 
-        layers.iter().for_each(|x: &TiledLayer| match x {
+        let tile_size_f32 = (tile_size.0 as f32, tile_size.1 as f32);
+
+        // let mut tile_ents = Vec::new();
+
+        layers.iter().enumerate().for_each(|(i, x)| match x {
             // TODO:
             // Handle other layer types
             TiledLayer::Tile(Layer { name, content, .. }) => {
-                let layer_ent = world
-                    .spawn((Name::new(name.clone()), TransformBundle::default()))
-                    .id();
+                // TODO:
+                // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
+                // iterator...
+                let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
+                spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
+
+                let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle)).id();
 
                 layer_ents.push(layer_ent);
 
                 let mut tile_ents = Vec::new();
 
-                // TODO:
-                // Maybe I want a layer container, and Name it ?
                 content
                     .indexed_iter()
                     .filter_map(|(p, t)| t.map(|v| (p, v)))
                     .for_each(
                         |(
-                            (x, y),
+                            tile_pos,
                             LayerTile {
                                 tile: Gid(tile_gid),
                                 flip_h,
@@ -169,14 +180,22 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 flip_d,
                             },
                         )| {
-                            let (x, y) = (x as f32, y as f32);
+                            let (world_pos_x, world_pos_y) = (
+                                tile_size_f32.0 * tile_pos.0 as f32,
+                                -tile_size_f32.1 * tile_pos.1 as f32,
+                            );
 
                             let tile_tileset = get_tileset_for_gid(tile_sets, Gid(tile_gid))
                                 .expect("Tile should belong to tileset");
 
-                            let tile_aux_info_opt = tile_tileset
-                                .tile_stuff
-                                .get(&get_tile_id(tile_tileset, Gid(tile_gid)));
+                            let tileset_index = tile_sets
+                                .iter()
+                                .position(|ts| ts.first_gid == tile_tileset.first_gid)
+                                .expect("Yes");
+
+                            let local_tile_id = get_tile_id(tile_tileset, Gid(tile_gid));
+
+                            let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
 
                             let mut tile_entity = world.spawn((
                                 SpriteBundle {
@@ -186,21 +205,17 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         anchor: Anchor::TopLeft,
                                         ..Default::default()
                                     },
-                                    transform: Transform::from_xyz(
-                                        x - ghalfsize_x,
-                                        y - ghalfsize_y,
-                                        0.,
-                                    ),
+                                    transform: Transform::from_xyz(world_pos_x, world_pos_y, 0.),
                                     // TODO:
                                     // Don't just get the `0` item
-                                    texture: tilemap_textures.get(0).unwrap().clone_weak(),
+                                    texture: tilemap_textures.get(tileset_index).unwrap().clone(),
                                     ..Default::default()
                                 },
                                 TextureAtlas {
                                     // TODO:
                                     // Don't just get the `0` item
-                                    layout: tilemap_atlases.get(0).unwrap().clone(),
-                                    index: tile_gid as usize,
+                                    layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
+                                    index: local_tile_id as usize,
                                 },
                             ));
 
@@ -224,12 +239,15 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             }
         });
 
+        // TODO:
+        // I'm not convinced this `per-entity` thing is very good.
         let mut e_c = world.spawn((
             TiledMapContainer,
             // TODO:
             // There may be some situation where it won't just be 0 ?
-            TransformBundle::default(),
+            SpatialBundle::INHERITED_IDENTITY,
         ));
+        // e_c.push_children(&tile_ents);
         e_c.push_children(&layer_ents);
         e_c.set_parent(world_root_id);
         let loaded_scene = scene_load_context.finish(Scene::new(world), None);
@@ -256,22 +274,43 @@ fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                     false
                 }
             })
-            .for_each(|o| {
-                if let ObjectType::Point = o.otype {
-                    return;
-                }
+            .for_each(
+                |Object {
+                     position: (x, y),
+                     size,
+                     rotation,
+                     tile_global_id,
+                     visible,
+                     otype,
+                     properties,
+                     ..
+                 }| {
+                    if let ObjectType::Point = otype {
+                        return;
+                    }
 
-                let (Vec2 { x, y }, collider) =
-                    construct_geometry(&o.otype, o.size.map(|(x, y)| Vec2 { x, y }), None);
+                    let (
+                        Vec2 {
+                            x: offset_x,
+                            y: offset_y,
+                        },
+                        collider,
+                    ) = construct_geometry(&otype, size.map(|(x, y)| Vec2 { x, y }), None);
 
-                cb.spawn((
-                    TransformBundle::from_transform(
-                        Transform::from_xyz(x, y, 0.)
-                            .with_rotation(Quat::from_axis_angle(Vec3::Z, o.rotation.to_radians())),
-                    ),
-                    collider,
-                ));
-            })
+                    cb.spawn((
+                        TransformBundle::from_transform(
+                            Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.).with_rotation(
+                                Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
+                            ),
+                        ),
+                        Serialized {
+                            data: bincode::serialize(&collider)
+                                .expect("Expected to serialize collider"),
+                            thingy: SceneSerializedComponents::RCollider,
+                        },
+                    ));
+                },
+            )
     });
 }
 

@@ -284,36 +284,39 @@ fn object_parse(x: &Xml) -> Option<Object> {
         tile_global_id: get_parse(&t.attributes, "gid"),
         visible: (get_parse::<u8>(&t.attributes, "visible").unwrap_or(1) == 1),
         otype: match c {
-            Some(v) => {
-                if let Some(Xml::Element(o_t, _)) = v.get(0) {
-                    match o_t.value.as_str() {
-                        "ellipse" => ObjectType::Ellipse,
-                        "point" => ObjectType::Point,
-                        "polygon" => ObjectType::Polygon({
-                            parse_spaced_f32_pairs(
-                                o_t.attributes
-                                    .get("points")
-                                    .expect("Polygon should have `points` attribute."),
-                            )
-                            .unwrap()
-                        }),
-                        "polyline" => ObjectType::Polyline(
-                            parse_spaced_f32_pairs(
-                                o_t.attributes
-                                    .get("points")
-                                    .expect("Polyline should have `points` attribute."),
-                            )
-                            .unwrap(),
-                        ),
-                        _ => unreachable!("First element's tag was expected to be an ObjectType"),
+            Some(v) => v
+                .iter()
+                .find_map(|xml_c| {
+                    if let Xml::Element(Tag { value, attributes }, _) = xml_c {
+                        match value.as_str() {
+                            "ellipse" => Some(ObjectType::Ellipse),
+                            "point" => Some(ObjectType::Point),
+                            "polygon" => Some(ObjectType::Polygon(
+                                parse_spaced_f32_pairs(
+                                    attributes
+                                        .get("points")
+                                        .expect("Polygon should have `points` attribute."),
+                                )
+                                .unwrap(),
+                            )),
+                            "polyline" => Some(ObjectType::Polyline(
+                                parse_spaced_f32_pairs(
+                                    attributes
+                                        .get("points")
+                                        .expect("Polyline should have `points` attribute."),
+                                )
+                                .unwrap(),
+                            )),
+                            _ => None,
+                        }
+                    } else {
+                        None
                     }
-                } else {
-                    unreachable!("Object type should be a Xml Element")
-                }
-            }
+                })
+                .unwrap_or(ObjectType::Rectangle),
             None => ObjectType::Rectangle,
         }, // If there is no object type in the xml, it's a Rectangle
-        properties: HashMap::new(),
+        properties: parse_tmx_properties(&x).unwrap_or_default(),
     })
 }
 

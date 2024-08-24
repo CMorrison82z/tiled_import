@@ -66,10 +66,16 @@ pub fn parse_tiles_csv<'a>(i: &'a str) -> Result<Array2<u32>, nom::Err<(&str, Er
     csv_root::<(&str, ErrorKind)>(i).map(|(_, x)| {
         // TODO:
         // Make this better...
-        let mut rr = ndarray::Array2::from_shape_vec((x.len() / columns, columns), x)
+        // let mut rr = ndarray::Array2::from_shape_vec((x.len() / columns, columns), x)
+        //     .unwrap()
+        //     .reversed_axes();
+        // NOTE:
+        // This would flip the y-axis. But I think interpretting the axis is better left for the
+        // user.
+        // rr.invert_axis(ndarray::Axis(1));
+        // rr
+        ndarray::Array2::from_shape_vec((x.len() / columns, columns), x)
             .unwrap()
-            .reversed_axes();
-        rr.invert_axis(ndarray::Axis(1));
-        rr
+            .reversed_axes()
     })
 }

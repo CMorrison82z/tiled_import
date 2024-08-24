@@ -19,7 +19,9 @@ bevy = {version = "0.14.1", features = [
   "png",
 
 ]}
-bevy_rapier2d = { version = "0.27.0", optional = true }
+serde = "*"
+bincode = "*"
+bevy_rapier2d = { version = "0.27.0", features = ["serde-serialize"], optional = true }
 # my-dependency.workspace = true
 # other-dev-dependency = "0.1.2"
 
