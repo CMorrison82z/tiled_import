@@ -56,22 +56,31 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
         get_parse::<u32>(&t.attributes, "tileheight").unwrap(),
     );
 
+    let margin = get_parse::<u8>(&t.attributes, "margin").unwrap_or(0);
+    let spacing = get_parse::<u8>(&t.attributes, "spacing").unwrap_or(0);
+
     Some(TileSet {
         tile_size,
         first_gid,
         name: t.attributes.get("name").unwrap().clone(),
-        margin: get_parse::<u8>(&t.attributes, "margin").unwrap_or(0),
-        spacing: get_parse::<u8>(&t.attributes, "spacing").unwrap_or(0),
+        margin,
+        spacing,
         image: e
             .iter()
             .find(|x| x.tag_has_name("image"))
             .map(|xml_element| match xml_element {
                 Xml::Element(img_tag, _) => Image {
                     source: img_tag.attributes.get("source").unwrap().into(),
-                    dimensions: (
-                        get_parse::<u32>(&img_tag.attributes, "width").unwrap() / tile_size.0,
-                        get_parse::<u32>(&img_tag.attributes, "height").unwrap() / tile_size.1,
-                    ),
+                    dimensions: {
+                        (
+                            (get_parse::<u32>(&img_tag.attributes, "width").unwrap()
+                                - (margin as u32))
+                                / (tile_size.0 + (spacing as u32)),
+                            (get_parse::<u32>(&img_tag.attributes, "height").unwrap()
+                                - (margin as u32))
+                                / (tile_size.1 + (spacing as u32)),
+                        )
+                    },
                     format: img_tag
                         .attributes
                         .get("format")
