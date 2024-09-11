@@ -112,11 +112,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .to_str()
             .expect("Valid utf8");
 
-        println!(
-            "tilesize : {}, {} | rowCols : {}, {} | spaceMarg : {}, {}",
-            tile_size.0, tile_size.1, rows, columns, spacing, margin
-        );
-
         // TODO:
         // I don't know if I should use "add_labeled_asset", and if the arguments are
         // conventional

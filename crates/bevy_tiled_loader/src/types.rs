@@ -15,6 +15,9 @@ use bincode::ErrorKind;
 use serde::{Deserialize, Serialize};
 use tiled_parse::data_types::TiledMap;
 
+#[derive(Component)]
+pub struct BufferedMapScene(pub Handle<TiledMapAsset>);
+
 #[derive(Component, Reflect)]
 pub struct TiledMapContainer;
 
