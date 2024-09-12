@@ -6,7 +6,7 @@ use bevy::ecs::component::Component;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::reflect;
 use bevy::reflect::{Reflect, TypePath};
-use bevy::scene::Scene;
+use bevy::scene::{Scene, SceneBundle};
 use bevy::sprite::TextureAtlasLayout;
 use bevy::transform::components::{GlobalTransform, Transform};
 use bevy::utils::hashbrown::HashMap;
@@ -15,8 +15,9 @@ use bincode::ErrorKind;
 use serde::{Deserialize, Serialize};
 use tiled_parse::data_types::TiledMap;
 
+/// The scene bundle's `scene` should be just `default`
 #[derive(Component)]
-pub struct BufferedMapScene(pub Handle<TiledMapAsset>);
+pub struct BufferedMapScene(pub SceneBundle, pub Handle<TiledMapAsset>);
 
 #[derive(Component, Reflect)]
 pub struct TiledMapContainer;

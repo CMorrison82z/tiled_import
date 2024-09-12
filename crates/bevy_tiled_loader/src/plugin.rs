@@ -35,20 +35,20 @@ fn load_buffered_map(
     a: Res<Assets<TiledMapAsset>>,
 ) {
     q.iter()
-        .filter_map(|(e, BufferedMapScene(m))| {
+        .filter_map(|(e, BufferedMapScene(sc, m))| {
             if s.get_load_state(m) == Some(bevy::asset::LoadState::Loaded) {
-                a.get(m).map(|tma| (e, tma))
+                a.get(m).map(|tma| (e, sc, tma))
             } else {
                 None
             }
         })
-        .for_each(|(e, tma)| {
+        .for_each(|(e, sc, tma)| {
             let mut e_c = c.entity(e);
             e_c.remove::<BufferedMapScene>();
 
-            e_c.insert(SceneBundle {
-                scene: tma.scene.clone(),
-                ..Default::default()
-            });
+            // TODO:
+            // Don't clone the scene.
+            e_c.insert(sc.clone());
+            e_c.insert(tma.scene.clone());
         })
 }

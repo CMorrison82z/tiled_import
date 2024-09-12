@@ -10,7 +10,7 @@ pub type PairF32 = (f32, f32);
 
 pub type Properties = HashMap<String, TiledPropertyType>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Gid(pub u32);
 
 impl FromStr for Gid {
