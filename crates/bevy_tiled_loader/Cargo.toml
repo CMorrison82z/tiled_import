@@ -17,7 +17,6 @@ bevy = {version = "0.14.1", features = [
   "bevy_asset",
   "bevy_sprite",
   "png",
-
 ]}
 serde = "*"
 bincode = "*"
