@@ -174,30 +174,30 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     match x {
         Xml::Element(t, Some(c)) => match t.value.as_str() {
             "group" => Some(LayerHierarchy::Node(
-                TiledLayer::Group(parse_layer(t, ())),
+                parse_layer(t, LayerType::Group),
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
             "map" => Some(LayerHierarchy::Node(
-                TiledLayer::Group(Layer {
+                TiledLayer {
                     id: 0,
                     name: "base".into(),
                     visible: true,
                     opacity: 1.,
                     parallax: (0., 0.),
-                    content: (),
-                }),
+                    content: LayerType::Group,
+                },
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
             // } else {
             //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
             // }),
-            "objectgroup" => Some(LayerHierarchy::Leaf(TiledLayer::Object(parse_layer(
+            "objectgroup" => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
-                c.iter().filter_map(object_parse).collect(),
-            )))),
-            "layer" => Some(LayerHierarchy::Leaf(TiledLayer::Tile(parse_layer(
+                LayerType::ObjectLayer(c.iter().filter_map(object_parse).collect()),
+            ))),
+            "layer" => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
-                grid_parse(
+                LayerType::TileLayer(grid_parse(
                     v,
                     c.iter()
                         .find(|x| {
@@ -208,12 +208,12 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                             }
                         })
                         .unwrap(),
-                ),
-            )))),
-            "imagelayer" => Some(LayerHierarchy::Leaf(TiledLayer::Image(parse_layer(
+                )),
+            ))),
+            "imagelayer" => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
-                todo!(),
-            )))),
+                LayerType::ImageLayer(todo!()),
+            ))),
             _ => None,
         },
         _ => None,
@@ -331,8 +331,8 @@ fn object_parse(x: &Xml) -> Option<Object> {
 
 // TODO:
 // Include `properties`
-fn parse_layer<T>(t: &Tag, content: T) -> Layer<T> {
-    Layer {
+fn parse_layer(t: &Tag, content: LayerType) -> TiledLayer {
+    TiledLayer {
         id: get_parse(&t.attributes, "id").unwrap(),
         name: t.attributes.get("name").unwrap().clone(),
         visible: (get_parse::<u8>(&t.attributes, "visible").unwrap_or(1) == 1),

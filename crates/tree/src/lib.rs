@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+// TODO:
+// Is there a way to uniformly allocate `Node` ?
 #[derive(Clone, Debug)]
 pub enum Tree<T> {
     Leaf(T),
@@ -7,7 +9,7 @@ pub enum Tree<T> {
 }
 
 impl<T> Tree<T> {
-    pub fn iter(&self) -> BreadthFirstIterator<T> {
+    pub fn iter_breadth(&self) -> BreadthFirstIterator<T> {
         BreadthFirstIterator::new(self)
     }
 }
@@ -96,7 +98,7 @@ impl<'a, T> BreadthFirstIterator<'a, T> {
     pub fn new(root: &'a Tree<T>) -> Self {
         let mut queue = VecDeque::new();
         queue.push_back(root);
-        BreadthFirstIterator ( queue )
+        BreadthFirstIterator(queue)
     }
 }
 
@@ -140,6 +142,8 @@ impl<T: Clone> BreadthFirstTreeZipperIterator<T> {
     }
 }
 
+/// PERF:
+/// Lots of cloning occurs. Should be investigated and optimized.
 impl<T: Clone> Iterator for BreadthFirstTreeZipperIterator<T> {
     type Item = TreeZipper<T>;
 

@@ -146,93 +146,107 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
         // let mut tile_ents = Vec::new();
 
-        layers.iter().enumerate().for_each(|(i, x)| match x {
-            // TODO:
-            // Handle other layer types
-            TiledLayer::Tile(Layer { name, content, .. }) => {
+        layers
+            .iter_breadth()
+            .enumerate()
+            .for_each(|(i, x)| match x {
                 // TODO:
-                // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
-                // iterator...
-                let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
-                spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
+                // Handle other layer types
+                TiledLayer {
+                    name,
+                    content: LayerType::TileLayer(tile_layer),
+                    ..
+                } => {
+                    // TODO:
+                    // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
+                    // iterator...
+                    let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
+                    spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
 
-                let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle)).id();
+                    let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle)).id();
 
-                layer_ents.push(layer_ent);
+                    layer_ents.push(layer_ent);
 
-                let mut tile_ents = Vec::new();
+                    let mut tile_ents = Vec::new();
 
-                content
-                    .indexed_iter()
-                    .filter_map(|(p, t)| t.map(|v| (p, v)))
-                    .for_each(
-                        |(
-                            tile_pos,
-                            LayerTile {
-                                tile: Gid(tile_gid),
-                                flip_h,
-                                flip_v,
-                                flip_d,
-                            },
-                        )| {
-                            let (world_pos_x, world_pos_y) = (
-                                tile_size_f32.0 * tile_pos.0 as f32,
-                                -tile_size_f32.1 * tile_pos.1 as f32,
-                            );
+                    tile_layer
+                        .indexed_iter()
+                        .filter_map(|(p, t)| t.map(|v| (p, v)))
+                        .for_each(
+                            |(
+                                tile_pos,
+                                LayerTile {
+                                    tile: Gid(tile_gid),
+                                    flip_h,
+                                    flip_v,
+                                    flip_d,
+                                },
+                            )| {
+                                let (world_pos_x, world_pos_y) = (
+                                    tile_size_f32.0 * tile_pos.0 as f32,
+                                    -tile_size_f32.1 * tile_pos.1 as f32,
+                                );
 
-                            let tile_tileset = get_tileset_for_gid(tile_sets, Gid(tile_gid))
-                                .expect("Tile should belong to tileset");
+                                let tile_tileset = get_tileset_for_gid(tile_sets, Gid(tile_gid))
+                                    .expect("Tile should belong to tileset");
 
-                            let tileset_index = tile_sets
-                                .iter()
-                                .position(|ts| ts.first_gid == tile_tileset.first_gid)
-                                .expect("Yes");
+                                let tileset_index = tile_sets
+                                    .iter()
+                                    .position(|ts| ts.first_gid == tile_tileset.first_gid)
+                                    .expect("Yes");
 
-                            let local_tile_id = get_tile_id(tile_tileset, Gid(tile_gid));
+                                let local_tile_id = get_tile_id(tile_tileset, Gid(tile_gid));
 
-                            let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
+                                let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
 
-                            let mut tile_entity = world.spawn((
-                                SpriteBundle {
-                                    sprite: Sprite {
-                                        flip_x: flip_h,
-                                        flip_y: flip_v,
-                                        anchor: Anchor::TopLeft,
+                                let mut tile_entity = world.spawn((
+                                    SpriteBundle {
+                                        sprite: Sprite {
+                                            flip_x: flip_h,
+                                            flip_y: flip_v,
+                                            anchor: Anchor::TopLeft,
+                                            ..Default::default()
+                                        },
+                                        transform: Transform::from_xyz(
+                                            world_pos_x,
+                                            world_pos_y,
+                                            0.,
+                                        ),
+                                        // TODO:
+                                        // Don't just get the `0` item
+                                        texture: tilemap_textures
+                                            .get(tileset_index)
+                                            .unwrap()
+                                            .clone(),
                                         ..Default::default()
                                     },
-                                    transform: Transform::from_xyz(world_pos_x, world_pos_y, 0.),
-                                    // TODO:
-                                    // Don't just get the `0` item
-                                    texture: tilemap_textures.get(tileset_index).unwrap().clone(),
-                                    ..Default::default()
-                                },
-                                TextureAtlas {
-                                    // TODO:
-                                    // Don't just get the `0` item
-                                    layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
-                                    index: local_tile_id as usize,
-                                },
-                            ));
+                                    TextureAtlas {
+                                        // TODO:
+                                        // Don't just get the `0` item
+                                        layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
+                                        index: local_tile_id as usize,
+                                    },
+                                ));
 
-                            if let Some(tile_aux_info) = tile_aux_info_opt {
-                                #[cfg(feature = "rapier2d_colliders")]
-                                {
-                                    add_colliders(&mut tile_entity, &tile_aux_info.objects);
+                                if let Some(tile_aux_info) = tile_aux_info_opt {
+                                    #[cfg(feature = "rapier2d_colliders")]
+                                    {
+                                        add_colliders(&mut tile_entity, &tile_aux_info.objects);
+                                    }
                                 }
-                            }
 
-                            tile_entity.set_parent(layer_ent);
+                                tile_entity.set_parent(layer_ent);
 
-                            // NOTE:
-                            // There is an assumption that it's being loaded for a 2d camera here.
-                            tile_ents.push(tile_entity.id());
-                        },
-                    );
-            }
-            _ => {
-                println!("Layer was not a `Tile` layer. Not currently handled.");
-            }
-        });
+                                // NOTE:
+                                // There is an assumption that it's being loaded for a 2d camera here.
+                                tile_ents.push(tile_entity.id());
+                            },
+                        );
+                }
+                _ => {
+                    todo!("Layer was not a `Tile` layer. Not currently handled.");
+                }
+            });
 
         // TODO:
         // I'm not convinced this `per-entity` thing is very good.

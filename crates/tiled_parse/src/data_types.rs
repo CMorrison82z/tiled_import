@@ -33,6 +33,7 @@ pub const FLIPPED_DIAGONALLY_FLAG: u32 = 0x20000000;
 pub const ALL_FLIP_FLAGS: u32 =
     FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG;
 
+/// Properties in Tiled Objects.
 #[derive(Clone, Debug)]
 pub enum TiledPropertyType {
     String(String),
@@ -49,17 +50,24 @@ pub enum TiledPropertyType {
     // Class(???)
 }
 
+/// Geometries for Tiled Objects.
 #[derive(Debug, Clone)]
 pub enum ObjectType {
-    Rectangle, // The existing x, y, width and height attributes are used to determine the size.
-    Ellipse, // The existing x, y, width and height attributes are used to determine the size of the ellipse.
-    Point,   // The existing x and y attributes are used to determine the position of the point.
-    Polygon(Vec<PairF32>), // The origin for these coordinates is the location of the parent
+    Rectangle,
+    /// The existing x, y, width and height attributes are used to determine the size.
+    Ellipse,
+    /// The existing x, y, width and height attributes are used to determine the size of the ellipse.
+    Point,
+    /// The existing x and y attributes are used to determine the position of the point.
+    Polygon(Vec<PairF32>),
+    /// The origin for these coordinates is the location of the parent
     Polyline(Vec<PairF32>),
 }
 
+// FIXME:
+// Dead code.
 #[derive(Debug)]
-pub struct Color {
+struct Color {
     pub alpha: u8,
     pub red: u8,
     pub green: u8,
@@ -82,6 +90,7 @@ pub struct Color {
 //     pub properties: Option<Properties>
 // }
 
+/// A tile placed on a Tile Layer.
 #[derive(Clone, Copy, Debug)]
 pub struct LayerTile {
     pub tile: Gid,
@@ -90,6 +99,7 @@ pub struct LayerTile {
     pub flip_d: bool,
 }
 
+/// Tiled Object.
 #[derive(Clone, Debug)]
 pub struct Object {
     pub id: ID,
@@ -104,8 +114,19 @@ pub struct Object {
     pub properties: Properties,
 }
 
+/// Layer content parameterized by an `enum` containing the data of each respective layer type.
 #[derive(Clone, Debug)]
-pub struct Layer<T> {
+pub enum LayerType {
+    TileLayer(Array2<Option<LayerTile>>),
+    ObjectLayer(Vec<Object>),
+    ImageLayer(ImageStuff),
+    /// A group later has no content, just serves as a structural guide.
+    Group,
+}
+
+/// A layer in a Tiled map.
+#[derive(Clone, Debug)]
+pub struct TiledLayer {
     pub id: ID,
     pub name: String,
     // pub class: String,
@@ -113,7 +134,7 @@ pub struct Layer<T> {
     // _pos: PairU32
     // Always same as Map size
     // _size
-    pub content: T,
+    pub content: LayerType,
     pub visible: bool,
     pub opacity: f32,
     pub parallax: (f32, f32),
@@ -128,18 +149,6 @@ pub struct ImageStuff {
     pub image: Image,
 }
 
-pub type TileLayer = Layer<Array2<Option<LayerTile>>>;
-pub type ObjectLayer = Layer<Vec<Object>>;
-pub type ImageLayer = Layer<ImageStuff>;
-
-#[derive(Clone, Debug)]
-pub enum TiledLayer {
-    Tile(TileLayer),
-    Object(ObjectLayer),
-    Image(ImageLayer),
-    Group(Layer<()>),
-}
-
 #[derive(Clone, Debug)]
 pub struct Image {
     pub source: PathBuf,
@@ -148,15 +157,15 @@ pub struct Image {
     // pub color: Color
 }
 
+/// Auxillary information about a tile
 #[derive(Debug)]
 pub struct TileAuxInfo {
     // Can contain at most one: <properties>, <image> (since 0.9), <objectgroup>, <animation>
     // pub color: Color,
     // pub animation: ObjectGroup,
     pub properties: Properties,
-    // NOTE:
-    // Departure from Tiled's file specification. Encoding the objects as an entire layer is
-    // wasteful and unhelpful.
+    /// NOTE:
+    /// This departure from Tiled's file specification. I don't like the idea of encoding the objects as an entire layer.
     pub objects: Vec<Object>,
 }
 
@@ -171,9 +180,9 @@ pub struct TileSet {
     // Removed for now because it's better to rely on `first_gid`
     // tile_count: u32,
     //
-    // Only supports a single Texture Atlas. Undecided on how to represent multiple images
+    /// Only supports a single Texture Atlas. Undecided on how to represent multiple images
     pub image: Image,
-    // This u32 is the LOCAL id of the tile (relative to this tileset)
+    /// This u32 is the LOCAL id of the tile (relative to this tileset)
     pub tile_stuff: HashMap<u32, TileAuxInfo>,
 }
 

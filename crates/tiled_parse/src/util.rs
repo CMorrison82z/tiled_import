@@ -32,7 +32,7 @@ fn f32_parse<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, f32, E>
     map(recognize_float, |s: &'a str| s.parse::<f32>().unwrap())(i)
 }
 
-pub fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
+pub(crate) fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<u32>, E> {
     cut(separated_list1(
@@ -41,7 +41,7 @@ pub fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     ))(i)
 }
 
-pub fn spaced_f32_pairs<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
+pub(crate) fn spaced_f32_pairs<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<PairF32>, E> {
     cut(separated_list0(
@@ -50,11 +50,13 @@ pub fn spaced_f32_pairs<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     ))(i)
 }
 
-pub fn parse_spaced_f32_pairs<'a>(i: &'a str) -> Result<Vec<PairF32>, nom::Err<(&str, ErrorKind)>> {
+pub(crate) fn parse_spaced_f32_pairs<'a>(
+    i: &'a str,
+) -> Result<Vec<PairF32>, nom::Err<(&str, ErrorKind)>> {
     spaced_f32_pairs(i).map(|(_, v)| v)
 }
 
-pub fn parse_tiles_csv<'a>(i: &'a str) -> Result<Array2<u32>, nom::Err<(&str, ErrorKind)>> {
+pub(crate) fn parse_tiles_csv<'a>(i: &'a str) -> Result<Array2<u32>, nom::Err<(&str, ErrorKind)>> {
     let columns = i
         .lines()
         .next()
