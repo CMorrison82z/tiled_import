@@ -16,9 +16,11 @@ use serde::{Deserialize, Serialize};
 use tiled_parse::data_types::TiledMap;
 
 /// The scene bundle's `scene` should be just `default`
+/// A useful struct for preparing a MapScene that has not necessarily been loaded yet.
 #[derive(Component)]
 pub struct BufferedMapScene(pub SceneBundle, pub Handle<TiledMapAsset>);
 
+/// Marker type for a Tiled Map
 #[derive(Component, Reflect)]
 pub struct TiledMapContainer;
 
