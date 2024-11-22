@@ -173,11 +173,8 @@ where
 fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     match x {
         Xml::Element(t, Some(c)) => match t.value.as_str() {
-            "group" => Some(LayerHierarchy::Node(
-                parse_layer(t, LayerType::Group),
-                c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
-            )),
-            "map" => Some(LayerHierarchy::Node(
+            // This is the base layer (top of the layer hierarchy)
+            BASE_LAYER => Some(LayerHierarchy::Node(
                 TiledLayer {
                     id: 0,
                     name: "base".into(),
@@ -185,17 +182,28 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                     opacity: 1.,
                     parallax: (0., 0.),
                     content: LayerType::Group,
+                    properties: parse_tmx_properties(x).unwrap_or_default(),
                 },
+                c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
+            )),
+            GROUP_LAYER => Some(LayerHierarchy::Node(
+                parse_layer(
+                    t,
+                    LayerType::Group,
+                    parse_tmx_properties(x).unwrap_or_default(),
+                ),
                 c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
             )),
             // } else {
             //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
             // }),
-            "objectgroup" => Some(LayerHierarchy::Leaf(parse_layer(
+            OBJECTGROUP_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
                 LayerType::ObjectLayer(c.iter().filter_map(object_parse).collect()),
+                parse_tmx_properties(x).unwrap_or_default(),
             ))),
-            "layer" => Some(LayerHierarchy::Leaf(parse_layer(
+            // This is the `tilelayer`
+            TILE_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
                 LayerType::TileLayer(grid_parse(
                     v,
@@ -209,10 +217,12 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                         })
                         .unwrap(),
                 )),
+                parse_tmx_properties(x).unwrap_or_default(),
             ))),
-            "imagelayer" => Some(LayerHierarchy::Leaf(parse_layer(
+            IMAGE_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
                 LayerType::ImageLayer(todo!()),
+                parse_tmx_properties(x).unwrap_or_default(),
             ))),
             _ => None,
         },
@@ -331,7 +341,7 @@ fn object_parse(x: &Xml) -> Option<Object> {
 
 // TODO:
 // Include `properties`
-fn parse_layer(t: &Tag, content: LayerType) -> TiledLayer {
+fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLayer {
     TiledLayer {
         id: get_parse(&t.attributes, "id").unwrap(),
         name: t.attributes.get("name").unwrap().clone(),
@@ -342,8 +352,9 @@ fn parse_layer(t: &Tag, content: LayerType) -> TiledLayer {
             get_parse(&t.attributes, "parallaxy").unwrap_or(1.),
         ),
         content, // TODO:
-                 // This is probably actually a `1` or `0`, like "visible"
-                 // repeatx: get_parse(&t.attributes, "repeatx").unwrap_or(false),
-                 // repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
+        // This is probably actually a `1` or `0`, like "visible"
+        // repeatx: get_parse(&t.attributes, "repeatx").unwrap_or(false),
+        // repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
+        properties,
     }
 }

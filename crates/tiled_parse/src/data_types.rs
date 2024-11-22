@@ -33,6 +33,12 @@ pub const FLIPPED_DIAGONALLY_FLAG: u32 = 0x20000000;
 pub const ALL_FLIP_FLAGS: u32 =
     FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG;
 
+pub const BASE_LAYER: &str = "map";
+pub const GROUP_LAYER: &str = "group";
+pub const OBJECTGROUP_LAYER: &str = "objectgroup";
+pub const TILE_LAYER: &str = "layer";
+pub const IMAGE_LAYER: &str = "imagelayer";
+
 /// Properties in Tiled Objects.
 #[derive(Clone, Debug)]
 pub enum TiledPropertyType {
@@ -138,6 +144,7 @@ pub struct TiledLayer {
     pub visible: bool,
     pub opacity: f32,
     pub parallax: (f32, f32),
+    pub properties: Properties,
 }
 
 // TODO:
