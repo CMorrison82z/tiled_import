@@ -119,13 +119,13 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .add_labeled_asset(
                 file_name.into(),
                 TextureAtlasLayout::from_grid(
-                    UVec2::new(tile_size.0, tile_size.1),
-                    *columns,
-                    *rows,
+                    Vec2::new(tile_size.0 as f32, tile_size.1 as f32),
+                    *columns as usize,
+                    *rows as usize,
                     // TODO:
                     // I'm not sure this translates correctly
-                    Some(*spacing as u32 * UVec2::ONE),
-                    Some(*margin as u32 * UVec2::ONE),
+                    Some(*spacing as f32 * Vec2::ONE),
+                    Some(*margin as f32 * Vec2::ONE),
                 ),
             );
 

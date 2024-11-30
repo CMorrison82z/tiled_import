@@ -1,4 +1,6 @@
-use crate::{load::TiledLoader, relations::deserialize_rapier_collider, types::*};
+use crate::{
+    load::TiledLoader, relations::deserialize_rapier_collider, types::*, util::clone_scene,
+};
 use bevy::prelude::*;
 
 pub fn tiled_scene_plugin(app: &mut App) {
@@ -9,23 +11,7 @@ pub fn tiled_scene_plugin(app: &mut App) {
         .register_type_data::<Serialized, ReflectComponent>()
         .init_asset::<TiledMapAsset>()
         .init_asset_loader::<TiledLoader>()
-        .add_systems(Update, load_buffered_map)
-        .observe(
-            |trigger: Trigger<OnAdd, Serialized>, query: Query<&Serialized>, mut c: Commands| {
-                let Ok(Serialized { data, thingy }) = query.get(trigger.entity()) else {
-                    return;
-                };
-
-                let mut ec = c.entity(trigger.entity());
-                ec.remove::<Serialized>();
-
-                ec.insert(match thingy {
-                    SceneSerializedComponents::RCollider => {
-                        deserialize_rapier_collider(&data).unwrap()
-                    }
-                });
-            },
-        );
+        .add_systems(Update, (load_buffered_map, deserialize_collider));
 }
 
 fn load_buffered_map(
@@ -48,7 +34,18 @@ fn load_buffered_map(
 
             // TODO:
             // Don't clone the scene.
-            e_c.insert(sc.clone());
+            e_c.insert(clone_scene(sc));
             e_c.insert(tma.scene.clone());
         })
+}
+
+fn deserialize_collider(mut c: Commands, q: Query<(Entity, &Serialized)>) {
+    q.iter().for_each(|(e, Serialized { data, thingy })| {
+        let mut ec = c.entity(e);
+        ec.remove::<Serialized>();
+
+        ec.insert(match thingy {
+            SceneSerializedComponents::RCollider => deserialize_rapier_collider(&data).unwrap(),
+        });
+    });
 }

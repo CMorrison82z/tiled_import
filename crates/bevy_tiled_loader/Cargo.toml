@@ -13,14 +13,15 @@ description = "Asset loader for the Tiled data parsed."
 
 [dependencies]
 tiled_parse.workspace = true
-bevy = {version = "0.14.1", features = [
+bevy = {version = "0.13.2", default-features = false, features = [
   "bevy_asset",
   "bevy_sprite",
+  "bevy_scene",
   "png",
 ]}
 serde = "*"
 bincode = "*"
-bevy_rapier2d = { version = "0.27.0", features = ["serde-serialize"], optional = true }
+bevy_rapier2d = { version = "0.26.0", features = ["serde-serialize"], optional = true }
 # my-dependency.workspace = true
 # other-dev-dependency = "0.1.2"
 
