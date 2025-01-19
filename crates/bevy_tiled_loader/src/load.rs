@@ -3,7 +3,6 @@ use std::fs::read_to_string;
 use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt, AsyncWriteExt};
 use bevy::asset::{Asset, Handle, LoadContext};
 use bevy::ecs::reflect;
-use bevy::hierarchy::BuildWorldChildren;
 use bevy::math::{UVec2, Vec2};
 use bevy::prelude::*;
 use bevy::prelude::{SpatialBundle, TransformBundle};
@@ -33,29 +32,27 @@ impl AssetLoader for TiledLoader {
     type Settings = ();
     type Error = std::io::Error;
 
-    fn load<'a>(
-        &'a self,
-        reader: &'a mut bevy::asset::io::Reader,
-        _settings: &'a Self::Settings,
-        load_context: &'a mut bevy::asset::LoadContext,
-    ) -> bevy::utils::BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-        Box::pin(async move {
-            let mut data = Vec::new();
-            reader.read_to_end(&mut data).await?;
+    async fn load(
+        &self,
+        reader: &mut dyn bevy::asset::io::Reader,
+        _settings: &Self::Settings,
+        load_context: &mut bevy::asset::LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data).await?;
 
-            let data_as_utf8 = std::str::from_utf8(&data).map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Could not load TMX map: {e}"),
-                )
-            })?;
+        let data_as_utf8 = std::str::from_utf8(&data).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Could not load TMX map: {e}"),
+            )
+        })?;
 
-            let tm: TiledMap = parse(data_as_utf8).map_err(|e| {
-                std::io::Error::new(std::io::ErrorKind::Other, format!("Could not load TMX map"))
-            })?;
+        let tm: TiledMap = parse(data_as_utf8).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::Other, format!("Could not load TMX map"))
+        })?;
 
-            load_tmx(load_context, tm)
-        })
+        load_tmx(load_context, tm)
     }
 
     fn extensions(&self) -> &[&str] {
@@ -200,39 +197,32 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
 
                                 let mut tile_entity = world.spawn((
-                                    SpriteBundle {
-                                        sprite: Sprite {
-                                            flip_x: flip_h,
-                                            flip_y: flip_v,
-                                            anchor: Anchor::TopLeft,
-                                            ..Default::default()
-                                        },
-                                        transform: Transform::from_xyz(
-                                            world_pos_x,
-                                            world_pos_y,
-                                            0.,
-                                        ),
-                                        // TODO:
-                                        // Don't just get the `0` item
-                                        texture: tilemap_textures
+                                    Sprite {
+                                        image: tilemap_textures
                                             .get(tileset_index)
                                             .unwrap()
                                             .clone(),
+                                        texture_atlas: Some(TextureAtlas {
+                                            layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
+                                            index: local_tile_id as usize,
+                                        }),
+                                        flip_x: flip_h,
+                                        flip_y: flip_v,
                                         ..Default::default()
                                     },
-                                    TextureAtlas {
-                                        // TODO:
-                                        // Don't just get the `0` item
-                                        layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
-                                        index: local_tile_id as usize,
-                                    },
+                                    Transform::from_xyz(
+                                        world_pos_x,
+                                        world_pos_y,
+                                        0.,
+                                    ),
                                 ));
 
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
                                     #[cfg(feature = "rapier2d_colliders")]
-                                    {
-                                        add_colliders(&mut tile_entity, &tile_aux_info.objects);
-                                    }
+                                    crate::rapier_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
+
+                                    #[cfg(feature = "avian2d_colliders")]
+                                    crate::avian_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
                                 }
 
                                 tile_entity.set_parent(layer_ent);
@@ -257,7 +247,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             SpatialBundle::INHERITED_IDENTITY,
         ));
         // e_c.push_children(&tile_ents);
-        e_c.push_children(&layer_ents);
+        e_c.add_children(&layer_ents);
         e_c.set_parent(world_root_id);
         let loaded_scene = scene_load_context.finish(Scene::new(world), None);
         // TODO:
@@ -271,56 +261,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
         tilemap_textures,
         tilemap_atlases,
     })
-}
-
-fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
-    e.with_children(|cb| {
-        os.iter()
-            .filter(|o| {
-                if let Some(TiledPropertyType::Bool(v)) = o.properties.get("collider") {
-                    *v
-                } else {
-                    false
-                }
-            })
-            .for_each(
-                |Object {
-                     position: (x, y),
-                     size,
-                     rotation,
-                     tile_global_id,
-                     visible,
-                     otype,
-                     properties,
-                     ..
-                 }| {
-                    if let ObjectType::Point = otype {
-                        return;
-                    }
-
-                    let (
-                        Vec2 {
-                            x: offset_x,
-                            y: offset_y,
-                        },
-                        collider,
-                    ) = construct_geometry(&otype, size.map(|(x, y)| Vec2 { x, y }), None);
-
-                    cb.spawn((
-                        TransformBundle::from_transform(
-                            Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.).with_rotation(
-                                Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
-                            ),
-                        ),
-                        Serialized {
-                            data: bincode::serialize(&collider)
-                                .expect("Expected to serialize collider"),
-                            thingy: SceneSerializedComponents::RCollider,
-                        },
-                    ));
-                },
-            )
-    });
 }
 
 // fn handle_parallax(
@@ -344,52 +284,6 @@ fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
 //                 );
 //         })
 // }
-
-fn construct_geometry(
-    shape: &ObjectType,
-    size: Option<Vec2>,
-    scale_factor: Option<Vect>,
-) -> (Vec2, Collider) {
-    let scale_factor = scale_factor.unwrap_or(Vect::ONE);
-
-    match shape {
-        ObjectType::Rectangle => {
-            let Some(size) = size else { unreachable!() };
-            (
-                size / 2. * scale_factor,
-                Collider::cuboid(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.),
-            )
-        }
-        ObjectType::Ellipse => {
-            let Some(size) = size else { unreachable!() };
-            todo!("Do it");
-        }
-        ObjectType::Polygon(points) => (
-            Vec2::ZERO,
-            Collider::convex_hull(
-                &points
-                    .iter()
-                    .map(|(x, y)| Vect::new(scale_factor.x * *x, scale_factor.y * -*y))
-                    .collect::<Vec<_>>(),
-            )
-            .unwrap(),
-        ),
-        ObjectType::Polyline(points) => (
-            Vec2::ZERO,
-            Collider::polyline(
-                points
-                    .iter()
-                    .map(|p| Vec2 {
-                        x: scale_factor.x * p.0,
-                        y: scale_factor.y * -p.1,
-                    })
-                    .collect(),
-                None,
-            ),
-        ),
-        _ => todo!(),
-    }
-}
 
 // TODO:
 // I guess for an ObjectLayer ? Maybe ?

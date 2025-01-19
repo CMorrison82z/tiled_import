@@ -38,12 +38,9 @@ pub struct TiledMapAsset {
 // TODO:
 // I'm not sure that I want to have the crate commit to this instance implementation...
 // For example, GPU rendering would be more efficient (like `bevy_ecs_tilemap`)
-#[derive(Default, Bundle)]
-pub struct TiledMapBundle {
-    pub tiled_map: Handle<TiledMapAsset>,
-    pub transform: Transform,
-    pub global_transform: GlobalTransform,
-}
+#[derive(Component)]
+#[require(Transform)]
+pub struct TiledMapRoot(pub Handle<TiledMapAsset>);
 
 // NOTE:
 // While this could be made further general to any Serailizer, because of how `serde` Serailizers
@@ -58,7 +55,7 @@ pub struct Serialized {
 
 #[derive(Reflect)]
 pub enum SceneSerializedComponents {
-    RCollider,
+    SerCollider,
 }
 
 // impl<T> Serialized<T> {
