@@ -56,7 +56,7 @@ pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                         Serialized {
                             data: bincode::serialize(&collider)
                                 .expect("Expected to serialize collider"),
-                            thingy: SceneSerializedComponents::RCollider,
+                            thingy: SceneSerializedComponents::SerCollider,
                         },
                     ));
                 },
