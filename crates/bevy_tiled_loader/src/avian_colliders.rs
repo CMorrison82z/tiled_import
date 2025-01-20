@@ -88,7 +88,7 @@ fn construct_geometry(
                 // TODO:
                 // Determine correct offset.
                 size / 2. * scale_factor,
-                Collider::cirlce(size.x / 2.)
+                Collider::circle(size.x / 2.)
             )
         }
         ObjectType::Polygon(points) => (
