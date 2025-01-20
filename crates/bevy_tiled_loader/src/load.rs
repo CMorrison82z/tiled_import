@@ -234,7 +234,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                     }
                     LayerType::Group => println!("Group layer {name}"),
                     _ => {
-                        todo!("Layer was not a `Tile` layer. Not currently handled.");
+                        todo!("Layer {content:#?} is not currently handled.");
                     }
                 }
             });
