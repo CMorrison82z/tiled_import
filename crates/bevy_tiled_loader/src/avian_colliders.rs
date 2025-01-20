@@ -82,11 +82,13 @@ fn construct_geometry(
         ObjectType::Ellipse => {
             let Some(size) = size else { unreachable!() };
 
+            if size.x != size.y {panic!("Ellipses cannot be serialized, so therefore cannot be constructed. To construct a circle, make sure length and width are the same.")};
+
             (
                 // TODO:
                 // Determine correct offset.
                 size / 2. * scale_factor,
-                Collider::ellipse(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.)
+                Collider::cirlce(size.x / 2.)
             )
         }
         ObjectType::Polygon(points) => (
