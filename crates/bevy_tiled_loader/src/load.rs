@@ -146,95 +146,97 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
         layers
             .iter_breadth()
             .enumerate()
-            .for_each(|(i, x)| match x {
-                // TODO:
-                // Handle other layer types
-                TiledLayer {
-                    name,
-                    content: LayerType::TileLayer(tile_layer),
-                    ..
-                } => {
+            .for_each(|(i, x)| {
+                let TiledLayer { name, content, .. } = x;
+
+                println!("layer {name} : {content:#?}");
+
+                match content {
                     // TODO:
-                    // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
-                    // iterator...
-                    let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
-                    spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
+                    // Handle other layer types
+                    LayerType::TileLayer(tile_layer) => {
+                        // TODO:
+                        // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
+                        // iterator...
+                        let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
+                        spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
 
-                    let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle)).id();
+                        let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle)).id();
 
-                    layer_ents.push(layer_ent);
+                        layer_ents.push(layer_ent);
 
-                    let mut tile_ents = Vec::new();
+                        let mut tile_ents = Vec::new();
 
-                    tile_layer
-                        .indexed_iter()
-                        .filter_map(|(p, t)| t.map(|v| (p, v)))
-                        .for_each(
-                            |(
-                                tile_pos,
-                                LayerTile {
-                                    tile: Gid(tile_gid),
-                                    flip_h,
-                                    flip_v,
-                                    flip_d,
-                                },
-                            )| {
-                                let (world_pos_x, world_pos_y) = (
-                                    tile_size_f32.0 * tile_pos.0 as f32,
-                                    -tile_size_f32.1 * tile_pos.1 as f32,
-                                );
-
-                                let tile_tileset = get_tileset_for_gid(tile_sets, Gid(tile_gid))
-                                    .expect("Tile should belong to tileset");
-
-                                let tileset_index = tile_sets
-                                    .iter()
-                                    .position(|ts| ts.first_gid == tile_tileset.first_gid)
-                                    .expect("Yes");
-
-                                let local_tile_id = get_tile_id(tile_tileset, Gid(tile_gid));
-
-                                let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
-
-                                let mut tile_entity = world.spawn((
-                                    Sprite {
-                                        image: tilemap_textures
-                                            .get(tileset_index)
-                                            .unwrap()
-                                            .clone(),
-                                        texture_atlas: Some(TextureAtlas {
-                                            layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
-                                            index: local_tile_id as usize,
-                                        }),
-                                        flip_x: flip_h,
-                                        flip_y: flip_v,
-                                        ..Default::default()
+                        tile_layer
+                            .indexed_iter()
+                            .filter_map(|(p, t)| t.map(|v| (p, v)))
+                            .for_each(
+                                |(
+                                    tile_pos,
+                                    LayerTile {
+                                        tile: Gid(tile_gid),
+                                        flip_h,
+                                        flip_v,
+                                        flip_d,
                                     },
-                                    Transform::from_xyz(
-                                        world_pos_x,
-                                        world_pos_y,
-                                        0.,
-                                    ),
-                                ));
+                                )| {
+                                    let (world_pos_x, world_pos_y) = (
+                                        tile_size_f32.0 * tile_pos.0 as f32,
+                                        -tile_size_f32.1 * tile_pos.1 as f32,
+                                    );
 
-                                if let Some(tile_aux_info) = tile_aux_info_opt {
-                                    #[cfg(feature = "rapier2d_colliders")]
-                                    crate::rapier_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
+                                    let tile_tileset = get_tileset_for_gid(tile_sets, Gid(tile_gid))
+                                        .expect("Tile should belong to tileset");
 
-                                    #[cfg(feature = "avian2d_colliders")]
-                                    crate::avian_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
-                                }
+                                    let tileset_index = tile_sets
+                                        .iter()
+                                        .position(|ts| ts.first_gid == tile_tileset.first_gid)
+                                        .expect("Yes");
 
-                                tile_entity.set_parent(layer_ent);
+                                    let local_tile_id = get_tile_id(tile_tileset, Gid(tile_gid));
 
-                                // NOTE:
-                                // There is an assumption that it's being loaded for a 2d camera here.
-                                tile_ents.push(tile_entity.id());
-                            },
-                        );
-                }
-                _ => {
-                    todo!("Layer was not a `Tile` layer. Not currently handled.");
+                                    let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
+
+                                    let mut tile_entity = world.spawn((
+                                        Sprite {
+                                            image: tilemap_textures
+                                                .get(tileset_index)
+                                                .unwrap()
+                                                .clone(),
+                                            texture_atlas: Some(TextureAtlas {
+                                                layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
+                                                index: local_tile_id as usize,
+                                            }),
+                                            flip_x: flip_h,
+                                            flip_y: flip_v,
+                                            ..Default::default()
+                                        },
+                                        Transform::from_xyz(
+                                            world_pos_x,
+                                            world_pos_y,
+                                            0.,
+                                        ),
+                                    ));
+
+                                    if let Some(tile_aux_info) = tile_aux_info_opt {
+                                        #[cfg(feature = "rapier2d_colliders")]
+                                        crate::rapier_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
+
+                                        #[cfg(feature = "avian2d_colliders")]
+                                        crate::avian_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
+                                    }
+
+                                    tile_entity.set_parent(layer_ent);
+
+                                    // NOTE:
+                                    // There is an assumption that it's being loaded for a 2d camera here.
+                                    tile_ents.push(tile_entity.id());
+                                },
+                            );
+                    }
+                    _ => {
+                        todo!("Layer was not a `Tile` layer. Not currently handled.");
+                    }
                 }
             });
 
