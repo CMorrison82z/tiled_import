@@ -5,6 +5,7 @@ use bevy::ecs::bundle::Bundle;
 use bevy::ecs::component::Component;
 use bevy::ecs::entity::Entity;
 use bevy::ecs::reflect;
+use bevy::prelude::Visibility;
 use bevy::reflect::{Reflect, TypePath};
 use bevy::scene::{Scene, SceneBundle};
 use bevy::sprite::TextureAtlasLayout;
@@ -18,7 +19,8 @@ use tiled_parse::data_types::TiledMap;
 /// The scene bundle's `scene` should be just `default`
 /// A useful struct for preparing a MapScene that has not necessarily been loaded yet.
 #[derive(Component)]
-pub struct BufferedMapScene(pub SceneBundle, pub Handle<TiledMapAsset>);
+#[require(Transform, Visibility)]
+pub struct BufferedMapScene(pub Handle<TiledMapAsset>);
 
 /// Marker type for a Tiled Map
 #[derive(Component, Reflect)]
@@ -34,13 +36,6 @@ pub struct TiledMapAsset {
     pub tilemap_atlases: Vec<Handle<TextureAtlasLayout>>,
     pub scene: Handle<Scene>,
 }
-
-// TODO:
-// I'm not sure that I want to have the crate commit to this instance implementation...
-// For example, GPU rendering would be more efficient (like `bevy_ecs_tilemap`)
-#[derive(Component)]
-#[require(Transform)]
-pub struct TiledMapRoot(pub Handle<TiledMapAsset>);
 
 // NOTE:
 // While this could be made further general to any Serailizer, because of how `serde` Serailizers
