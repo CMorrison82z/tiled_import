@@ -82,7 +82,12 @@ fn construct_geometry(
         ObjectType::Ellipse => {
             let Some(size) = size else { unreachable!() };
 
-            Collider::ellipse(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.),
+            (
+                // TODO:
+                // Determine correct offset.
+                size / 2. * scale_factor,
+                Collider::ellipse(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.)
+            )
         }
         ObjectType::Polygon(points) => (
             Vec2::ZERO,
