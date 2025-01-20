@@ -207,6 +207,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                             }),
                                             flip_x: flip_h,
                                             flip_y: flip_v,
+                                            anchor: Anchor::BottomLeft,
                                             ..Default::default()
                                         },
                                         Transform::from_xyz(
