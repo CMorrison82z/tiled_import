@@ -233,8 +233,17 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             );
                     }
                     LayerType::Group => println!("Group layer {name}"),
+                    LayerType::ObjectLayer(os) => {
+                        let mut layer_entity = world.spawn((Name::new(name.clone()), Transform::IDENTITY));
+
+                        #[cfg(feature = "rapier2d_colliders")]
+                        crate::rapier_colliders::add_colliders(&mut layer_entity, os);
+
+                        #[cfg(feature = "avian2d_colliders")]
+                        crate::avian_colliders::add_colliders(&mut layer_entity, os);
+                    },
                     _ => {
-                        eprintln!("Layer {content:#?} is not currently handled.");
+                        eprintln!("Layer `{name} : {content:#?}` is not currently handled.");
                     }
                 }
             });
