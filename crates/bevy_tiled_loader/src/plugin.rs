@@ -23,11 +23,10 @@ pub fn tiled_scene_plugin(app: &mut App) {
                 println!("Point 3");
 
                 ec.insert(match thingy {
-                    SceneSerializedComponents::SerCollider => {
-                        #[cfg(feature = "rapier2d_colliders")]
-                        crate::rapier_colliders::deserialize_collider(&data).unwrap();
-                        #[cfg(feature = "avian2d_colliders")]
-                        crate::avian_colliders::deserialize_collider(&data).unwrap();
+                    #[cfg(feature = "rapier2d_colliders")]
+                    SceneSerializedComponents::SerCollider => crate::rapier_colliders::deserialize_collider(&data).unwrap(),
+                    #[cfg(feature = "avian2d_colliders")]
+                    SceneSerializedComponents::SerCollider => crate::avian_colliders::deserialize_collider(&data).unwrap(),
                     }
                 });
             },
