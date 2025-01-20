@@ -236,6 +236,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                     LayerType::ObjectLayer(os) => {
                         let mut layer_entity = world.spawn((Name::new(name.clone()), Transform::IDENTITY));
 
+                        layer_ents.push(layer_entity.id());
+
                         #[cfg(feature = "rapier2d_colliders")]
                         crate::rapier_colliders::add_colliders(&mut layer_entity, os);
 
