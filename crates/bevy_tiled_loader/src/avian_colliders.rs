@@ -76,14 +76,13 @@ fn construct_geometry(
             let Some(size) = size else { unreachable!() };
             (
                 size / 2. * scale_factor,
-                Collider::rectangle(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.),
+                Collider::rectangle(scale_factor.x * size.x,  scale_factor.y * size.y),
             )
         }
         ObjectType::Ellipse => {
             let Some(size) = size else { unreachable!() };
-            // TODO:
-            // If size.x == size.y, then can return a Circle.
-            todo!("Do it");
+
+            Collider::ellipse(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.),
         }
         ObjectType::Polygon(points) => (
             Vec2::ZERO,
