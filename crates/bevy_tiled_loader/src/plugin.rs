@@ -27,6 +27,9 @@ pub fn tiled_scene_plugin(app: &mut App) {
                 );
             },
         );
+
+    #[cfg(feature = "avian2d_colliders")]
+    app.register_type::<avian2d::prelude::RigidBody>();
 }
 
 fn load_buffered_map(
