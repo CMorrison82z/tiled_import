@@ -15,6 +15,7 @@ pub fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>> {
 }
 
 pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
+    println!("GOnnad do construct");
     e.with_children(|cb| {
         os.iter()
             .filter(|o| {
@@ -35,6 +36,7 @@ pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                      properties,
                      ..
                  }| {
+                    println!("Big construct");
                     if let ObjectType::Point = otype {
                         return;
                     }
