@@ -149,8 +149,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .for_each(|(i, x)| {
                 let TiledLayer { name, content, .. } = x;
 
-                println!("layer {name} : {content:#?}");
-
                 match content {
                     // TODO:
                     // Handle other layer types
@@ -234,6 +232,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 },
                             );
                     }
+                    LayerType::Group => println!("Group layer {name}"),
                     _ => {
                         todo!("Layer was not a `Tile` layer. Not currently handled.");
                     }
