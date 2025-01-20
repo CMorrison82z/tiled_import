@@ -42,15 +42,12 @@ pub struct TiledMapAsset {
 // are suggested to be written (the result byte stream stored within the instance, without a clear
 // way of extracting it), I cannot easily generalize it...
 #[derive(Component, Reflect)]
-// pub struct Serialized<T: Serialize + for<'de> Deserialize<'de>> {
-pub struct Serialized {
-    pub data: Vec<u8>,
-    pub thingy: SceneSerializedComponents,
-}
+pub struct SerializedComponents(pub HashMap<SceneSerializedComponents, Vec<u8>>);
 
-#[derive(Reflect)]
+#[derive(Reflect, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SceneSerializedComponents {
     SerCollider,
+    SerRigidBody,
 }
 
 // impl<T> Serialized<T> {

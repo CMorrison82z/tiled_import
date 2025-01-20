@@ -3,9 +3,10 @@ use bevy::prelude::*;
 use bevy::transform::components::{Transform};
 
 use avian2d::prelude::*;
+use bevy::utils::HashMap;
 use bincode::ErrorKind;
 
-use crate::types::{SceneSerializedComponents, Serialized, TiledMapAsset, TiledMapContainer};
+use crate::types::{SceneSerializedComponents, SerializedComponents, TiledMapAsset, TiledMapContainer};
 use tiled_parse::data_types::*;
 
 // TODO:
@@ -53,14 +54,12 @@ pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                                 Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
                             ),
                         ),
-                        // TODO:
-                        // Parse a tiled property to allow other RigidBody types
-                        RigidBody::Static,
-                        Serialized {
-                            data: bincode::serialize(&collider)
-                                .expect("Expected to serialize collider"),
-                            thingy: SceneSerializedComponents::SerCollider,
-                        },
+                        SerializedComponents(HashMap::from([
+                            (SceneSerializedComponents::SerCollider, bincode::serialize(&collider).unwrap()),
+                            // TODO:
+                            // Parse a tiled property to allow other RigidBody types
+                            (SceneSerializedComponents::SerRigidBody, bincode::serialize(&RigidBody::Static).unwrap())
+                        ]))
                     ));
                 },
             )

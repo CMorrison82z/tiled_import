@@ -15,7 +15,7 @@ use bevy::utils::hashbrown::HashMap;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
-use crate::types::{SceneSerializedComponents, Serialized, TiledMapAsset, TiledMapContainer};
+use crate::types::{TiledMapAsset, TiledMapContainer};
 use tiled_parse::data_types::*;
 use tiled_parse::parse::*;
 

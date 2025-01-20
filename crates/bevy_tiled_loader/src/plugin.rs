@@ -3,28 +3,32 @@ use bevy::prelude::*;
 
 pub fn tiled_scene_plugin(app: &mut App) {
     app.register_type::<TiledMapContainer>()
-        .register_type::<Serialized>()
+        .register_type::<SerializedComponents>()
         .register_type_data::<TiledMapContainer, ReflectComponent>()
-        .register_type_data::<Serialized, ReflectComponent>()
+        .register_type_data::<SerializedComponents, ReflectComponent>()
         .init_asset::<TiledMapAsset>()
         .init_asset_loader::<TiledLoader>()
         .add_systems(Update, load_buffered_map)
         .add_observer(
-            |trigger: Trigger<OnAdd, Serialized>, query: Query<&Serialized>, mut c: Commands| {
-                let Ok(Serialized { data, thingy }) = query.get(trigger.entity()) else {
+            |trigger: Trigger<OnAdd, SerializedComponents>, query: Query<&SerializedComponents>, mut c: Commands| {
+                let Ok(SerializedComponents (data_map)) = query.get(trigger.entity()) else {
                     return;
                 };
 
                 let mut ec = c.entity(trigger.entity());
-                ec.remove::<Serialized>();
+                ec.remove::<SerializedComponents>();
 
-                ec.insert(match thingy {
-                    #[cfg(feature = "rapier2d_colliders")]
-                    SceneSerializedComponents::SerCollider => crate::rapier_colliders::deserialize_collider(&data).unwrap(),
-                    #[cfg(feature = "avian2d_colliders")]
-                    SceneSerializedComponents::SerCollider => crate::avian_colliders::deserialize_collider(&data).unwrap(),
+                data_map.iter().for_each(|(sc, d_bytes)| {
+                    match *sc {
+                        #[cfg(feature = "rapier2d_colliders")]
+                        SceneSerializedComponents::SerCollider  => {ec.insert(crate::rapier_colliders::deserialize_collider(&d_bytes).unwrap());},
+                        #[cfg(feature = "avian2d_colliders")]
+                        SceneSerializedComponents::SerCollider  => {ec.insert(crate::avian_colliders::deserialize_collider(&d_bytes).unwrap());},
+                        #[cfg(feature = "avian2d_colliders")]
+                        SceneSerializedComponents::SerRigidBody => {ec.insert(bincode::deserialize::<avian2d::prelude::RigidBody>(&d_bytes).unwrap());},
+                        _ => (),
                     }
-                );
+                });
             },
         );
 
