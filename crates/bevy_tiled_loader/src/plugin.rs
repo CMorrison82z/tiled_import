@@ -28,7 +28,7 @@ pub fn tiled_scene_plugin(app: &mut App) {
                     #[cfg(feature = "avian2d_colliders")]
                     SceneSerializedComponents::SerCollider => crate::avian_colliders::deserialize_collider(&data).unwrap(),
                     }
-                });
+                );
             },
         );
 }
