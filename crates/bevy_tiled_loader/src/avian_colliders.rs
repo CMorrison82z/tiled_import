@@ -53,6 +53,9 @@ pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                                 Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
                             ),
                         ),
+                        // TODO:
+                        // Parse a tiled property to allow other RigidBody types
+                        RigidBody::Static,
                         Serialized {
                             data: bincode::serialize(&collider)
                                 .expect("Expected to serialize collider"),
