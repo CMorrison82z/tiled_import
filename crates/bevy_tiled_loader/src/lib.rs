@@ -6,7 +6,7 @@
 //!     TiledScenePlugin
 //! )
 //!
-//! ...
+//! // ...
 //!
 //! fn spawn_tiled_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 //!     let tiled_map_handle: Handle<TiledMapAsset> = asset_server.load("my_first_tiled_map.tmx");
