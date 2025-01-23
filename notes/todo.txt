@@ -1,4 +1,0 @@
-## TODO ##
-- Write Bevy asset loader.
-  - Decide how to aline layers. Currently top-left is the origin.
-  (/) Load colliders

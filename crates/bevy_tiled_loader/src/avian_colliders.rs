@@ -11,11 +11,11 @@ use tiled_parse::data_types::*;
 
 // TODO:
 // Likely can be made more general and convenient
-pub fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>> {
+pub(crate) fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>> {
     bincode::deserialize::<Collider>(b)
 }
 
-pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
+pub(crate) fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
     e.with_children(|cb| {
         os.iter()
             .filter(|o| {

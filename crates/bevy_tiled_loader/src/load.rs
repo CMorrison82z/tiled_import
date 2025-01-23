@@ -19,16 +19,18 @@ use crate::types::{TiledMapAsset, TiledMapContainer};
 use tiled_parse::data_types::*;
 use tiled_parse::parse::*;
 
-/// Allows us to do `AssetServer.load("MY_MAP.tmx")`
+/// Load `*.tmx` via `AssetServer.load("MY_MAP.tmx")`
 #[derive(Default)]
 pub struct TiledLoader;
 
 pub const MAP_SCENE: &str = "MapScene";
 
 // TODO:
-// Improved error
+// Improve error
 impl AssetLoader for TiledLoader {
     type Asset = TiledMapAsset;
+    /// TODO:
+    /// Add settings
     type Settings = ();
     type Error = std::io::Error;
 

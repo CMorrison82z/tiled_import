@@ -16,8 +16,8 @@ use bincode::ErrorKind;
 use serde::{Deserialize, Serialize};
 use tiled_parse::data_types::TiledMap;
 
-/// The scene bundle's `scene` should be just `default`
-/// A useful struct for preparing a MapScene that has not necessarily been loaded yet.
+/// When the dependencies have loaded, will replace `BufferedMapScene` with a
+/// `SceneRoot(TiledMapAsset.scene)`
 #[derive(Component)]
 #[require(Transform, Visibility)]
 pub struct BufferedMapScene(pub Handle<TiledMapAsset>);
@@ -41,6 +41,14 @@ pub struct TiledMapAsset {
 // While this could be made further general to any Serailizer, because of how `serde` Serailizers
 // are suggested to be written (the result byte stream stored within the instance, without a clear
 // way of extracting it), I cannot easily generalize it...
+//
+/// `tiled_scene_plugin` will deserialize components added to Entities within a TiledMapContainer
+/// Scene.
+///
+/// Components like `Collider` are not `Reflect` (perhaps use ColliderConstructor instead ?), so they need to be Serialized. In the case of
+/// `RigidBody`, they have a lot of required Components, so deserializing them once they've been
+/// added to the main App where its required Components are in the type registry is more
+/// convenient. This is likely subject to change.
 #[derive(Component, Reflect)]
 pub struct SerializedComponents(pub HashMap<SceneSerializedComponents, Vec<u8>>);
 

@@ -1,3 +1,5 @@
+//! The data types are NOT a one-to-one mapping to how Tiled expresses them in a `.tmx`
+
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use ndarray::Array2;
@@ -50,10 +52,9 @@ pub enum TiledPropertyType {
     // Hex with alpha channel : #AARRGGBB)
     // Color(Vec<),
     File(PathBuf),
-    // Object properties can reference any object on the same map and are stored as an integer (the ID of the referenced object,
-    // or 0 when no object is referenced). When used on objects in the Tile Collision Editor, they can only refer to other objects on the same tile.
+    /// Object properties can reference any object on the same map and are stored as an integer (the ID of the referenced object,
+    /// or 0 when no object is referenced). When used on objects in the Tile Collision Editor, they can only refer to other objects on the same tile.
     Object(ID),
-    // Class(???)
 }
 
 /// Geometries for Tiled Objects.
@@ -198,7 +199,7 @@ pub type LayerHierarchy = Tree<TiledLayer>;
 #[derive(Debug)]
 pub struct TiledMap {
     pub layers: LayerHierarchy,
-    // Measured in tiles
+    /// Measured in tiles.
     pub grid_size: PairU32,
     pub tile_size: PairU32,
     pub tile_sets: Vec<TileSet>,

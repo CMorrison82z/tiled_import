@@ -1,3 +1,6 @@
+//! Adhoc Tree Zipper implementation. See [Zippers](https://wiki.haskell.org/index.php?title=Zipper) for more information.
+
+
 use std::collections::VecDeque;
 
 // TODO:
@@ -15,11 +18,14 @@ impl<T> Tree<T> {
 }
 
 impl<T: Clone> Tree<T> {
+    /// Iterate with Zippers. The Zippers allow users to inspect the surrounding structure at
+    /// the given Node.
     pub fn zipper_iter(&self) -> BreadthFirstTreeZipperIterator<T> {
         BreadthFirstTreeZipperIterator::new((*self).clone())
     }
 }
 
+/// Crumbs are used for traversing the structure.
 #[derive(Clone, Debug)]
 pub struct TreeCrumb<T> {
     item: T,
@@ -38,7 +44,8 @@ pub struct TreeCrumb<T> {
 pub struct TreeZipper<T>(pub Tree<T>, pub Vec<TreeCrumb<T>>);
 
 impl<T> TreeZipper<T> {
-    // Goes up one crumb
+    /// Goes up one crumb. Think of it as retracing a step taken to get to this point in the
+    /// structure.
     pub fn go_up(self) -> Option<Self> {
         let TreeZipper(focused, mut crumbs) = self;
         crumbs.pop().map(
@@ -53,6 +60,7 @@ impl<T> TreeZipper<T> {
             },
         )
     }
+    /// Get items from the structure located above the current Node.
     pub fn get_ancestors(&self) -> Vec<&T> {
         let TreeZipper(_, crumbs) = self;
 
@@ -64,7 +72,8 @@ impl<T> TreeZipper<T>
 where
     T: Clone + PartialEq,
 {
-    // Goes to a Tree node, stacking a crumb.
+    /// Descend the zipper using `match_fn`, returning a new Zipper at that Node with
+    /// crumbs to get back to the source Node if it is satisfied, or None if it isn't.
     pub fn go_to<F>(&self, match_fn: F) -> Option<Self>
     where
         F: Fn(&T) -> bool,

@@ -1,8 +1,14 @@
 use crate::{load::TiledLoader, types::*};
 use bevy::prelude::*;
 
-pub fn tiled_scene_plugin(app: &mut App) {
-    app.register_type::<TiledMapContainer>()
+pub struct TiledScenePlugin {
+    // TODO:
+    // Various options should be made available.
+}
+
+impl Plugin for TiledScenePlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<TiledMapContainer>()
         .register_type::<SerializedComponents>()
         .register_type_data::<TiledMapContainer, ReflectComponent>()
         .register_type_data::<SerializedComponents, ReflectComponent>()
@@ -26,7 +32,9 @@ pub fn tiled_scene_plugin(app: &mut App) {
                         SceneSerializedComponents::SerCollider  => {ec.insert(crate::avian_colliders::deserialize_collider(&d_bytes).unwrap());},
                         #[cfg(feature = "avian2d_colliders")]
                         SceneSerializedComponents::SerRigidBody => {ec.insert(bincode::deserialize::<avian2d::prelude::RigidBody>(&d_bytes).unwrap());},
-                        _ => (),
+                        _ => unimplemented!(":w
+
+"),
                     }
                 });
             },
@@ -34,6 +42,7 @@ pub fn tiled_scene_plugin(app: &mut App) {
 
     #[cfg(feature = "avian2d_colliders")]
     app.register_type::<avian2d::prelude::RigidBody>();
+    }
 }
 
 fn load_buffered_map(
