@@ -29,6 +29,7 @@ pub struct TiledMapContainer;
 #[derive(Component, Reflect)]
 pub enum TiledId {
     Layer(tiled_parse::data_types::ID),
+    /// Note that this is actually the `Gid` of a tile.
     Tile(tiled_parse::data_types::ID),
     Object(tiled_parse::data_types::ID),
 }
