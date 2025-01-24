@@ -12,6 +12,7 @@ impl Plugin for TiledScenePlugin {
         app.register_type::<TiledMapContainer>()
         .register_type::<SerializedComponents>()
         .register_type::<TiledId>()
+        .register_type_data::<TiledId, ReflectComponent>()
         .register_type_data::<TiledMapContainer, ReflectComponent>()
         .register_type_data::<SerializedComponents, ReflectComponent>()
         .init_asset::<TiledMapAsset>()
