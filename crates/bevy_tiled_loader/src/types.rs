@@ -27,13 +27,11 @@ pub struct BufferedMapScene(pub Handle<TiledMapAsset>);
 pub struct TiledMapContainer;
 
 #[derive(Component, Reflect)]
-pub struct TiledLayerId(pub tiled_parse::data_types::ID);
-
-#[derive(Component, Reflect)]
-pub struct TiledTileId(pub tiled_parse::data_types::ID);
-
-#[derive(Component, Reflect)]
-pub struct TiledObjectId(pub tiled_parse::data_types::ID);
+pub enum TiledId {
+    Layer(tiled_parse::data_types::ID),
+    Tile(tiled_parse::data_types::ID),
+    Object(tiled_parse::data_types::ID)
+}
 
 #[derive(TypePath, Asset)]
 pub struct TiledMapAsset {

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use tiled_parse::data_types::TiledLayer;
+use try_match::match_ok;
 
-use crate::types::{TiledLayerId, TiledMapAsset};
+use crate::types::{TiledId, TiledMapAsset};
 
 /// Given a `TiledMapAsset`, returns `Entity`'s with a SceneRoot containing `TiledMapAsset.scene`.
 pub fn get_entities_with_tiled_map(a: &TiledMapAsset, q: &Query<(Entity, &SceneRoot)>) -> Vec<Entity> {
@@ -16,6 +17,8 @@ pub fn get_tiled_map_with_scene<'a>(a: &'a Res<Assets<TiledMapAsset>>, SceneRoot
 }
 
 /// Given a `TiledLayer` from a `TiledMapAsset`.
-pub fn get_layer_from_id(a: &TiledMapAsset, TiledLayerId(id): TiledLayerId) -> Option<&TiledLayer> {
+pub fn get_layer_from_id(a: &TiledMapAsset, tid: TiledId) -> Option<&TiledLayer> {
+    let id = match_ok!(tid, TiledId::Layer(x))?;
+
     tiled_parse::relations::get_layer_from_id(&a.map.layers, id)
 }
