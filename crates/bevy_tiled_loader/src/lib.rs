@@ -23,7 +23,7 @@ compile_error!("features `crate/rapier2d_colliders` and `crate/avian2d_colliders
 pub mod load;
 pub mod plugin;
 pub mod types;
-// pub mod relations;
+pub mod relations;
 #[cfg(feature = "rapier2d_colliders")]
 pub mod rapier_colliders;
 #[cfg(feature = "avian2d_colliders")]

@@ -32,9 +32,7 @@ impl Plugin for TiledScenePlugin {
                         SceneSerializedComponents::SerCollider  => {ec.insert(crate::avian_colliders::deserialize_collider(&d_bytes).unwrap());},
                         #[cfg(feature = "avian2d_colliders")]
                         SceneSerializedComponents::SerRigidBody => {ec.insert(bincode::deserialize::<avian2d::prelude::RigidBody>(&d_bytes).unwrap());},
-                        _ => unimplemented!(":w
-
-"),
+                        _ => unimplemented!(),
                     }
                 });
             },

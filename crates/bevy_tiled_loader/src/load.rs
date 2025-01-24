@@ -246,7 +246,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         layer_ents.push(layer_entity.id());
 
                         // TODO:
-                        // Other object things. Sprite.
+                        // Other object things. Sprite. Add `TiledObjectId`
                         // WARN:
                         // Sprite Transform can't be shared with collider transform :(
                         //
