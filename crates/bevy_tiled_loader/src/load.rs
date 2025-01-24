@@ -15,7 +15,7 @@ use bevy::utils::hashbrown::HashMap;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
-use crate::types::{TiledMapAsset, TiledMapContainer};
+use crate::types::{TiledLayerId, TiledMapAsset, TiledMapContainer, TiledObjectId, TiledTileId};
 use tiled_parse::data_types::*;
 use tiled_parse::parse::*;
 
@@ -149,7 +149,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .iter_breadth()
             .enumerate()
             .for_each(|(i, x)| {
-                let TiledLayer { name, content, .. } = x;
+                let TiledLayer { id, name, content, .. } = x;
 
                 match content {
                     // TODO:
@@ -161,7 +161,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
                         spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
 
-                        let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle)).id();
+                        let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle, TiledTileId(*id))).id();
 
                         layer_ents.push(layer_ent);
 
@@ -217,8 +217,12 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                             world_pos_y,
                                             0.,
                                         ),
+                                        TiledTileId(tile_gid)
                                     ));
 
+                                    // WARN:
+                                    // If for some reason the Collider were to be Dynamic, the
+                                    // Tile Sprite would NOT follow it.
                                     if let Some(tile_aux_info) = tile_aux_info_opt {
                                         #[cfg(feature = "rapier2d_colliders")]
                                         crate::rapier_colliders::add_colliders(&mut tile_entity, &tile_aux_info.objects);
@@ -237,9 +241,18 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                     }
                     LayerType::Group => println!("Group layer {name}"),
                     LayerType::ObjectLayer(os) => {
-                        let mut layer_entity = world.spawn((Name::new(name.clone()), Transform::IDENTITY));
+                        let mut layer_entity = world.spawn((Name::new(name.clone()), Transform::IDENTITY, TiledLayerId(*id)));
 
                         layer_ents.push(layer_entity.id());
+
+                        // TODO:
+                        // Other object things. Sprite.
+                        // WARN:
+                        // Sprite Transform can't be shared with collider transform :(
+                        //
+                        // os.iter().for_each(|Object { id, position, size, rotation, tile_global_id, visible, otype, properties }| {
+                        //
+                        // });
 
                         #[cfg(feature = "rapier2d_colliders")]
                         crate::rapier_colliders::add_colliders(&mut layer_entity, os);

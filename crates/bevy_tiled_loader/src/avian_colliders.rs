@@ -49,10 +49,8 @@ pub(crate) fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                     ) = construct_geometry(&otype, size.map(|(x, y)| Vec2 { x, y }), None);
 
                     cb.spawn((
-                        TransformBundle::from_transform(
-                            Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.).with_rotation(
-                                Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
-                            ),
+                        Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.).with_rotation(
+                            Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
                         ),
                         SerializedComponents(HashMap::from([
                             (SceneSerializedComponents::SerCollider, bincode::serialize(&collider).unwrap()),
