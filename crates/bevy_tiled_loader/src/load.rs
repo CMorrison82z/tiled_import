@@ -15,7 +15,7 @@ use bevy::utils::hashbrown::HashMap;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
-use crate::types::{TiledLayerId, TiledMapAsset, TiledMapContainer, TiledObjectId, TiledTileId};
+use crate::types::{TiledId, TiledMapAsset, TiledMapContainer};
 use tiled_parse::data_types::*;
 use tiled_parse::parse::*;
 
@@ -161,7 +161,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
                         spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
 
-                        let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle, TiledTileId(*id))).id();
+                        let layer_ent = world.spawn((Name::new(name.clone()), spatial_bundle, TiledId::Layer(*id))).id();
 
                         layer_ents.push(layer_ent);
 
@@ -217,7 +217,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                             world_pos_y,
                                             0.,
                                         ),
-                                        TiledTileId(tile_gid)
+                                        TiledId::Tile(tile_gid)
                                     ));
 
                                     // WARN:
@@ -241,7 +241,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                     }
                     LayerType::Group => println!("Group layer {name}"),
                     LayerType::ObjectLayer(os) => {
-                        let mut layer_entity = world.spawn((Name::new(name.clone()), Transform::IDENTITY, TiledLayerId(*id)));
+                        let mut layer_entity = world.spawn((Name::new(name.clone()), Transform::IDENTITY, TiledId::Layer(*id)));
 
                         layer_ents.push(layer_entity.id());
 
