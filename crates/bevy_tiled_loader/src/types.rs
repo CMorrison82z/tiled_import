@@ -30,7 +30,7 @@ pub struct TiledMapContainer;
 pub enum TiledId {
     Layer(tiled_parse::data_types::ID),
     Tile(tiled_parse::data_types::ID),
-    Object(tiled_parse::data_types::ID)
+    Object(tiled_parse::data_types::ID),
 }
 
 #[derive(TypePath, Asset)]
