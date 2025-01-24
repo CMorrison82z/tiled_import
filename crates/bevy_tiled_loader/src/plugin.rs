@@ -1,6 +1,7 @@
 use crate::{load::TiledLoader, types::*};
 use bevy::prelude::*;
 
+#[derive(Default)]
 pub struct TiledScenePlugin {
     // TODO:
     // Various options should be made available.
