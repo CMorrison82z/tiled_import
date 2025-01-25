@@ -20,6 +20,8 @@ use tiled_parse::data_types::*;
 use tiled_parse::parse::*;
 
 /// Load `*.tmx` via `AssetServer.load("MY_MAP.tmx")`
+///
+/// Note that objects within tile's tileset are NOT marked with ANY TiledId.
 #[derive(Default)]
 pub struct TiledLoader;
 

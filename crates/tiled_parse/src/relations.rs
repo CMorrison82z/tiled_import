@@ -38,4 +38,11 @@ impl TiledMap {
                 .map(|tai| &tai.objects)
         })
     }
+
+    /// Gets an object in the scene. Note that objects in Tile Maps can have overlapping IDs...
+    pub fn get_scene_object(&self, id: ID) -> Option<&Object> {
+        self.layers.iter_breadth().find_map(|l| if let LayerType::ObjectLayer(os) = &l.content {
+            os.iter().find(|o| o.id == id)
+        } else {None})
+    }
 }
