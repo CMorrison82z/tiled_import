@@ -258,8 +258,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         if let &ObjectType::Tile(tile_gid) = otype {
                             let scale_factor = if let Some((width, height)) = size {
                                 Vec2::new(
-                                    width / (grid_size.0 as f32),
-                                    height / (grid_size.1 as f32),
+                                    width / (tile_size.0 as f32),
+                                    height / (tile_size.1 as f32),
                                 )
                             } else {
                                 Vec2::ONE
