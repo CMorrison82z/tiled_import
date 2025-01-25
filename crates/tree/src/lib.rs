@@ -1,6 +1,5 @@
 //! Adhoc Tree Zipper implementation. See [Zippers](https://wiki.haskell.org/index.php?title=Zipper) for more information.
 
-
 use std::collections::VecDeque;
 
 // TODO:

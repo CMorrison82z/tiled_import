@@ -60,6 +60,14 @@ pub enum TiledPropertyType {
 /// Geometries for Tiled Objects.
 #[derive(Debug, Clone)]
 pub enum ObjectType {
+    Tile(Gid),
+    Geometry(GeometryType),
+    // TODO: Text
+}
+
+/// Geometries for Tiled Objects.
+#[derive(Debug, Clone)]
+pub enum GeometryType {
     Rectangle,
     /// The existing x, y, width and height attributes are used to determine the size.
     Ellipse,
@@ -114,8 +122,6 @@ pub struct Object {
     pub position: PairF32,
     pub size: Option<PairF32>,
     pub rotation: f32,
-    // If the object is attached to a Tile, this field will exist.
-    pub tile_global_id: Option<Gid>,
     pub visible: bool,
     pub otype: ObjectType,
     pub properties: Properties,

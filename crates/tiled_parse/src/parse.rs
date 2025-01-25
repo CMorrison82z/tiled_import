@@ -295,45 +295,50 @@ fn object_parse(x: &Xml) -> Option<Object> {
             get_parse::<f32>(&t.attributes, "height").map(|height| (width, height))
         }),
         rotation: get_parse(&t.attributes, "rotation").unwrap_or_default(),
-        // NOTE:
-        // This actually highlights a shortcoming of converting and flattening the Result to an
-        // Option.
-        // We no longer know if it failed to parse due to a parse error, or if the field was
-        // missing.
-        tile_global_id: get_parse(&t.attributes, "gid"),
         visible: (get_parse::<u8>(&t.attributes, "visible").unwrap_or(1) == 1),
-        otype: match c {
-            Some(v) => v
-                .iter()
-                .find_map(|xml_c| {
-                    if let Xml::Element(Tag { value, attributes }, _) = xml_c {
-                        match value.as_str() {
-                            "ellipse" => Some(ObjectType::Ellipse),
-                            "point" => Some(ObjectType::Point),
-                            "polygon" => Some(ObjectType::Polygon(
-                                parse_spaced_f32_pairs(
-                                    attributes
-                                        .get("points")
-                                        .expect("Polygon should have `points` attribute."),
-                                )
-                                .unwrap(),
-                            )),
-                            "polyline" => Some(ObjectType::Polyline(
-                                parse_spaced_f32_pairs(
-                                    attributes
-                                        .get("points")
-                                        .expect("Polyline should have `points` attribute."),
-                                )
-                                .unwrap(),
-                            )),
-                            _ => None,
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or(ObjectType::Rectangle),
-            None => ObjectType::Rectangle,
+        otype: {
+            // If the object has a `gid`, then it is a `Tile` object (https://doc.mapeditor.org/en/stable/manual/objects/#insert-tile)
+            if let Some(gid) = get_parse(&t.attributes, "gid") {
+                ObjectType::Tile(gid)
+            } else {
+                // FIXME: This could be nicer.
+                match c {
+                    Some(v) => v
+                        .iter()
+                        .find_map(|xml_c| {
+                            if let Xml::Element(Tag { value, attributes }, _) = xml_c {
+                                match value.as_str() {
+                                    "ellipse" => Some(ObjectType::Geometry(GeometryType::Ellipse)),
+                                    "point" => Some(ObjectType::Geometry(GeometryType::Point)),
+                                    "polygon" => Some(ObjectType::Geometry(GeometryType::Polygon(
+                                        parse_spaced_f32_pairs(
+                                            attributes
+                                                .get("points")
+                                                .expect("Polygon should have `points` attribute."),
+                                        )
+                                        .unwrap(),
+                                    ))),
+                                    "polyline" => {
+                                        Some(ObjectType::Geometry(GeometryType::Polyline(
+                                            parse_spaced_f32_pairs(
+                                                attributes.get("points").expect(
+                                                    "Polyline should have `points` attribute.",
+                                                ),
+                                            )
+                                            .unwrap(),
+                                        )))
+                                    }
+                                    _ => None,
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(ObjectType::Geometry(GeometryType::Rectangle)),
+                    None => ObjectType::Geometry(GeometryType::Rectangle),
+                    // TODO:
+                }
+            }
         }, // If there is no object type in the xml, it's a Rectangle
         properties: parse_tmx_properties(&x).unwrap_or_default(),
     })

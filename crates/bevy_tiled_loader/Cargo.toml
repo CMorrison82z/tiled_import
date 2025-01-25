@@ -34,7 +34,7 @@ avian2d = { version = "0.2.0", features = ["serialize"], optional = true }
 # TODO:
 # default should be no colliders.
 [features]
-default = []
+default = ["avian2d_colliders"]
 rapier2d_colliders = ["dep:bevy_rapier2d"]
 avian2d_colliders = ["dep:avian2d"]
 # sprite3d = []
