@@ -311,7 +311,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 );
                             }
 
-                            println!("{:?}", o);
+                            println!("ent: {:?} - {:?}", tile_entity.id(), o);
 
                             tile_entity.set_parent(layer_entity_id);
                         } else {
