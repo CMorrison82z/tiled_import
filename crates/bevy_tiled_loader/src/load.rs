@@ -280,6 +280,11 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                             let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
 
+                            println!(
+                                "tile-obj: {:?} - {:?} has scale {scale_factor}",
+                                tile_gid, *id
+                            );
+
                             let mut tile_entity = world.spawn((
                                 Sprite {
                                     image: tilemap_textures.get(tileset_index).unwrap().clone(),
@@ -314,8 +319,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     &tile_aux_info.objects,
                                 );
                             }
-
-                            println!("ent: {:?} - {:?}", tile_entity.id(), o);
 
                             tile_entity.set_parent(layer_entity_id);
                         } else {
