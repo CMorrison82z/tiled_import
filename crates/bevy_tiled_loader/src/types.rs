@@ -20,7 +20,7 @@ use tiled_parse::data_types::TiledMap;
 /// `SceneRoot(TiledMapAsset.scene)`
 #[derive(Component)]
 #[require(Transform, Visibility)]
-pub struct BufferedMapScene(pub Handle<TiledMapAsset>);
+pub struct TiledMapScene(pub Handle<TiledMapAsset>);
 
 /// Marker type for a Tiled Map
 #[derive(Component, Reflect)]

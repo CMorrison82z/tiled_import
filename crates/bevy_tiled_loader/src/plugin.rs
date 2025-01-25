@@ -48,12 +48,12 @@ impl Plugin for TiledScenePlugin {
 
 fn load_buffered_map(
     mut c: Commands,
-    q: Query<(Entity, &BufferedMapScene)>,
+    q: Query<(Entity, &TiledMapScene), Without<SceneRoot>>,
     s: Res<AssetServer>,
     a: Res<Assets<TiledMapAsset>>,
 ) {
     q.iter()
-        .filter_map(|(e, BufferedMapScene(m))| {
+        .filter_map(|(e, TiledMapScene(m))| {
             if matches!(s.get_load_state(m), Some(bevy::asset::LoadState::Loaded)) {
                 a.get(m).map(|tma| (e, tma))
             } else {
@@ -62,7 +62,6 @@ fn load_buffered_map(
         })
         .for_each(|(e, tma)| {
             let mut e_c = c.entity(e);
-            e_c.remove::<BufferedMapScene>();
 
             e_c.insert(SceneRoot(tma.scene.clone()));
         })
