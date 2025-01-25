@@ -244,94 +244,87 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                     layer_ents.push(layer_entity_id);
 
-
                     // FIXME: Dynamic RigidBody's move independently from the Sprite.
-                    os.iter().for_each(
-                        |o| {
-                            let Object {
-                             id,
-                             position,
-                             size,
-                             rotation,
-                             visible,
-                             otype,
-                             properties,
-                         } = o;
-                            if let &ObjectType::Tile(tile_gid) = otype {
-                                let scale_factor = if let Some((width, height)) = size {
-                                    Vec2::new(
-                                        width / (grid_size.0 as f32),
-                                        height / (grid_size.1 as f32),
-                                    )
-                                } else {
-                                    Vec2::ONE
-                                };
+                    os.iter().for_each(|o| {
+                        let Object {
+                            id,
+                            position,
+                            size,
+                            rotation,
+                            otype,
+                            ..
+                        } = o;
 
-                                // TODO: Many verify, much excite.
-                                let world_pos = scale_factor * Vec2::new(position.0, -position.1);
-
-                                let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
-                                    .expect("Tile should belong to tileset");
-
-                                let tileset_index = tile_sets
-                                    .iter()
-                                    .position(|ts| ts.first_gid == tile_tileset.first_gid)
-                                    .expect("Yes");
-
-                                let local_tile_id = get_tile_id(tile_tileset, tile_gid);
-
-                                let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
-
-                                let mut tile_entity = world.spawn((
-                                    Sprite {
-                                        image: tilemap_textures.get(tileset_index).unwrap().clone(),
-                                        texture_atlas: Some(TextureAtlas {
-                                            layout: tilemap_atlases
-                                                .get(tileset_index)
-                                                .unwrap()
-                                                .clone(),
-                                            index: local_tile_id as usize,
-                                        }),
-                                        anchor: Anchor::Center,
-                                        ..Default::default()
-                                    },
-                                    Transform::from_translation(world_pos.extend(0.))
-                                        .with_rotation(Quat::from_axis_angle(
-                                            Vec3::Z,
-                                            rotation.to_radians(),
-                                        )),
-                                    TiledId::Object(*id),
-                                ));
-
-                                // FIXME: Dynamic RigidBody's move independently from the Sprite.
-                                if let Some(tile_aux_info) = tile_aux_info_opt {
-                                    #[cfg(feature = "rapier2d_colliders")]
-                                    crate::rapier_colliders::add_colliders(
-                                        &mut tile_entity,
-                                        &tile_aux_info.objects,
-                                    );
-
-                                    #[cfg(feature = "avian2d_colliders")]
-                                    crate::avian_colliders::add_child_colliders(
-                                        &mut tile_entity,
-                                        &tile_aux_info.objects,
-                                    );
-                                }
-
-                                tile_entity.set_parent(layer_entity_id);
+                        println!("{:?}", o);
+                        if let &ObjectType::Tile(tile_gid) = otype {
+                            let scale_factor = if let Some((width, height)) = size {
+                                Vec2::new(
+                                    width / (grid_size.0 as f32),
+                                    height / (grid_size.1 as f32),
+                                )
                             } else {
-                                let mut obj_ent = world.spawn_empty();
+                                Vec2::ONE
+                            };
 
+                            // TODO: Many verify, much excite.
+                            let world_pos = scale_factor * Vec2::new(position.0, -position.1);
+
+                            let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
+                                .expect("Tile should belong to tileset");
+
+                            let tileset_index = tile_sets
+                                .iter()
+                                .position(|ts| ts.first_gid == tile_tileset.first_gid)
+                                .expect("Yes");
+
+                            let local_tile_id = get_tile_id(tile_tileset, tile_gid);
+
+                            let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
+
+                            let mut tile_entity = world.spawn((
+                                Sprite {
+                                    image: tilemap_textures.get(tileset_index).unwrap().clone(),
+                                    texture_atlas: Some(TextureAtlas {
+                                        layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
+                                        index: local_tile_id as usize,
+                                    }),
+                                    anchor: Anchor::Center,
+                                    ..Default::default()
+                                },
+                                Transform::from_translation(world_pos.extend(0.)).with_rotation(
+                                    Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
+                                ),
+                                TiledId::Object(*id),
+                            ));
+
+                            // FIXME: Dynamic RigidBody's move independently from the Sprite.
+                            if let Some(tile_aux_info) = tile_aux_info_opt {
                                 #[cfg(feature = "rapier2d_colliders")]
-                                crate::rapier_colliders::add_colliders(&mut layer_entity, os);
+                                crate::rapier_colliders::add_colliders(
+                                    &mut tile_entity,
+                                    &tile_aux_info.objects,
+                                );
 
                                 #[cfg(feature = "avian2d_colliders")]
-                                crate::avian_colliders::insert_collider(&mut obj_ent, o);
-
-                                obj_ent.set_parent(layer_entity_id);
+                                crate::avian_colliders::add_child_colliders(
+                                    &mut tile_entity,
+                                    &tile_aux_info.objects,
+                                );
                             }
-                        },
-                    );
+
+                            tile_entity.set_parent(layer_entity_id);
+                        } else {
+                            let mut obj_ent = world.spawn_empty();
+
+                            #[cfg(feature = "rapier2d_colliders")]
+                            crate::rapier_colliders::add_colliders(&mut layer_entity, os);
+
+                            #[cfg(feature = "avian2d_colliders")]
+                            crate::avian_colliders::insert_collider(&mut obj_ent, o);
+
+                            obj_ent.set_parent(layer_entity_id);
+                        }
+                    });
                 }
                 _ => {
                     eprintln!("Layer `{name} : {content:#?}` is not currently handled.");
