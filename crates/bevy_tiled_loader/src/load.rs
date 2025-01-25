@@ -257,10 +257,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                         if let &ObjectType::Tile(tile_gid) = otype {
                             let scale_factor = if let Some((width, height)) = size {
-                                Vec2::new(
-                                    width / (tile_size.0 as f32),
-                                    height / (tile_size.1 as f32),
-                                )
+                                Vec2::new(width / (tile_size_f32.0), height / (tile_size_f32.1))
                             } else {
                                 Vec2::ONE
                             };
@@ -292,7 +289,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
                                         index: local_tile_id as usize,
                                     }),
-                                    anchor: Anchor::Center,
+                                    anchor: Anchor::BottomLeft,
                                     ..Default::default()
                                 },
                                 // FIXME: Use a correct z-index.
