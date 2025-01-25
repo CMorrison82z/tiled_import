@@ -266,7 +266,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             };
 
                             let world_pos = Vec2::new(
-                                position.0 + scale_factor.x * tile_size_f32.0 ,
+                                position.0,
                                 -(position.1 - scale_factor.y * tile_size_f32.1 ),
                             );
 
