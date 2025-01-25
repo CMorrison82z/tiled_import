@@ -177,6 +177,9 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     flip_d,
                                 },
                             )| {
+                                if flip_d {
+                                    panic!("`flip_d` is not yet implemented");
+                                }
                                 let (world_pos_x, world_pos_y) = (
                                     tile_size_f32.0 * tile_pos.0 as f32,
                                     -tile_size_f32.1 * tile_pos.1 as f32,
@@ -263,8 +266,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             };
 
                             let world_pos = Vec2::new(
-                                position.0 + scale_factor.x * tile_size_f32.0 / 2.,
-                                -(position.1 - scale_factor.y * tile_size_f32.1 / 2.),
+                                position.0 + scale_factor.x * tile_size_f32.0 ,
+                                -(position.1 - scale_factor.y * tile_size_f32.1 ),
                             );
 
                             let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
@@ -279,11 +282,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                             let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
 
-                            println!(
-                                "tile-obj: {:?} - {:?} has scale {scale_factor}",
-                                tile_gid, *id
-                            );
-
                             let mut tile_entity = world.spawn((
                                 Sprite {
                                     image: tilemap_textures.get(tileset_index).unwrap().clone(),
@@ -291,7 +289,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
                                         index: local_tile_id as usize,
                                     }),
-                                    anchor: Anchor::Center,
+                                    anchor: Anchor::TopLeft,
                                     ..Default::default()
                                 },
                                 // FIXME: Use a correct z-index.
@@ -364,43 +362,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
     })
 }
 
-// fn tile_sprite() {
-//     let (world_pos_x, world_pos_y) = (
-//         tile_size_f32.0 * tile_pos.0 as f32,
-//         -tile_size_f32.1 * tile_pos.1 as f32,
-//     );
-//
-//     let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
-//         .expect("Tile should belong to tileset");
-//
-//     let tileset_index = tile_sets
-//         .iter()
-//         .position(|ts| ts.first_gid == tile_tileset.first_gid)
-//         .expect("Yes");
-//
-//     let local_tile_id = get_tile_id(tile_tileset, tile_gid);
-//
-//     let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
-//
-//     let mut tile_entity = world.spawn((
-//         Sprite {
-//             image: tilemap_textures.get(tileset_index).unwrap().clone(),
-//             texture_atlas: Some(TextureAtlas {
-//                 layout: tilemap_atlases
-//                     .get(tileset_index)
-//                     .unwrap()
-//                     .clone(),
-//                 index: local_tile_id as usize,
-//             }),
-//             flip_x: flip_h,
-//             flip_y: flip_v,
-//             anchor: Anchor::TopLeft,
-//             ..Default::default()
-//         },
-//         Transform::from_xyz(world_pos_x, world_pos_y, 0.),
-//         TiledId::Tile(tile_gid.0),
-//     ));
-// }
 // fn handle_parallax(
 //     camera_trans_q: Query<&Transform, With<Camera>>,
 //     mut parallax_layer: Query<(&mut Transform, &LayerParallax), Without<Camera>>,
@@ -421,53 +382,4 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 //                     0.,
 //                 );
 //         })
-// }
-
-// TODO:
-// I guess for an ObjectLayer ? Maybe ?
-// fn tile_collision(
-//     grid_size: TilemapGridSize,
-//     object_layer: ObjectLayerData,
-//     custom_size: Option<(f32, f32)>,
-// ) -> Option<(Collider, TransformBundle)> {
-//     let (width, height) = custom_size.unwrap_or((grid_size.x, grid_size.y));
-//
-//     let shapes = object_layer
-//         .object_data()
-//         .iter()
-//         .filter_map(|object_data| {
-//             let scale_factor = Vect::new(width / grid_size.x, height / grid_size.y);
-//
-//             let pos = scale_factor * Vect::new(object_data.x, -object_data.y);
-//             let rot = object_data.rotation;
-//
-//             let (shape_pos, collider) = construct_geometry(&object_data.shape, Some(scale_factor));
-//
-//             Some((
-//                 Vect::new(
-//                     pos.x - width / 2. + shape_pos.x,
-//                     pos.y + height / 2. - shape_pos.y,
-//                 ),
-//                 rot,
-//                 collider,
-//             ))
-//         })
-//         .collect::<Vec<_>>();
-//
-//     if shapes.len() == 1 {
-//         let (pos, rot, collider) = shapes[0].clone();
-//
-//         Some((
-//             collider,
-//             TransformBundle::from_transform(Transform {
-//                 translation: Vec3::new(pos.x, pos.y, 0.),
-//                 rotation: Quat::from_rotation_x(rot),
-//                 ..default()
-//             }),
-//         ))
-//     } else if shapes.len() > 1 {
-//         Some((Collider::compound(shapes), TransformBundle::default()))
-//     } else {
-//         None
-//     }
 // }
