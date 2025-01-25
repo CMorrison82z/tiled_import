@@ -255,7 +255,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             ..
                         } = o;
 
-                        println!("{:?}", o);
                         if let &ObjectType::Tile(tile_gid) = otype {
                             let scale_factor = if let Some((width, height)) = size {
                                 Vec2::new(
@@ -311,6 +310,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     &tile_aux_info.objects,
                                 );
                             }
+
+                            println!("{:?}", o);
 
                             tile_entity.set_parent(layer_entity_id);
                         } else {
