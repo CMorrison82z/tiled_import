@@ -266,7 +266,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             };
 
                             // TODO: Many verify, much excite.
-                            let world_pos = scale_factor * Vec2::new(position.0, -position.1);
+                            let world_pos = Vec2::new(position.0, -position.1);
 
                             let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
                                 .expect("Tile should belong to tileset");
@@ -290,9 +290,13 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     anchor: Anchor::Center,
                                     ..Default::default()
                                 },
-                                Transform::from_translation(world_pos.extend(0.)).with_rotation(
-                                    Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
-                                ),
+                                // FIXME: Use a correct z-index.
+                                Transform::from_translation(world_pos.extend(3.))
+                                    .with_rotation(Quat::from_axis_angle(
+                                        Vec3::Z,
+                                        rotation.to_radians(),
+                                    ))
+                                    .with_scale(scale_factor.extend(1.)),
                                 TiledId::Object(*id),
                             ));
 
