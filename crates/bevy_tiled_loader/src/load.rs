@@ -263,7 +263,10 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             };
 
                             // TODO: Many verify, much excite.
-                            let world_pos = Vec2::new(position.0, -position.1);
+                            let world_pos = Vec2::new(
+                                position.0 - scale_factor * tile_size_f32 / 2.,
+                                -(position.1 - scale_factor * tile_size_f32 / 2.),
+                            );
 
                             let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
                                 .expect("Tile should belong to tileset");
@@ -289,7 +292,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
                                         index: local_tile_id as usize,
                                     }),
-                                    anchor: Anchor::BottomLeft,
+                                    anchor: Anchor::Center,
                                     ..Default::default()
                                 },
                                 // FIXME: Use a correct z-index.
