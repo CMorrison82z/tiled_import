@@ -143,8 +143,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
         let tile_size_f32 = (tile_size.0 as f32, tile_size.1 as f32);
 
-        // let mut tile_ents = Vec::new();
-
         layers.iter_breadth().enumerate().for_each(|(i, x)| {
             let TiledLayer {
                 id, name, content, ..
@@ -165,8 +163,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         .id();
 
                     layer_ents.push(layer_ent);
-
-                    let mut tile_ents = Vec::new();
 
                     tile_layer
                         .indexed_iter()
@@ -233,32 +229,26 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 }
 
                                 tile_entity.set_parent(layer_ent);
-
-                                // NOTE:
-                                // There is an assumption that it's being loaded for a 2d camera here.
-                                tile_ents.push(tile_entity.id());
                             },
                         );
                 }
                 LayerType::Group => println!("Group layer {name}"),
                 LayerType::ObjectLayer(os) => {
-                    let mut layer_entity = world.spawn((
+                    let layer_entity = world.spawn((
                         Name::new(name.clone()),
                         Transform::IDENTITY,
                         TiledId::Layer(*id),
                     ));
 
-                    layer_ents.push(layer_entity.id());
+                    let layer_entity_id = layer_entity.id();
 
-                    // TODO:
-                    // Other object things. Sprite. Add `TiledObjectId`
-                    // WARN:
-                    // Sprite Transform can't be shared with collider transform
-                    // because if for some reason the Collider were to be Dynamic, the
-                    // Tile Sprite would NOT follow it.
+                    layer_ents.push(layer_entity_id);
 
+
+                    // FIXME: Dynamic RigidBody's move independently from the Sprite.
                     os.iter().for_each(
-                        |Object {
+                        |o| {
+                            let Object {
                              id,
                              position,
                              size,
@@ -266,7 +256,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                              visible,
                              otype,
                              properties,
-                         }| {
+                         } = o;
                             if let &ObjectType::Tile(tile_gid) = otype {
                                 let scale_factor = if let Some((width, height)) = size {
                                     Vec2::new(
@@ -292,8 +282,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                                 let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
 
-                                let o_ent = world.spawn(());
-
                                 let mut tile_entity = world.spawn((
                                     Sprite {
                                         image: tilemap_textures.get(tileset_index).unwrap().clone(),
@@ -315,13 +303,32 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     TiledId::Object(*id),
                                 ));
 
-                                layer_ents.push(o_ent.id());
+                                // FIXME: Dynamic RigidBody's move independently from the Sprite.
+                                if let Some(tile_aux_info) = tile_aux_info_opt {
+                                    #[cfg(feature = "rapier2d_colliders")]
+                                    crate::rapier_colliders::add_colliders(
+                                        &mut tile_entity,
+                                        &tile_aux_info.objects,
+                                    );
+
+                                    #[cfg(feature = "avian2d_colliders")]
+                                    crate::avian_colliders::add_child_colliders(
+                                        &mut tile_entity,
+                                        &tile_aux_info.objects,
+                                    );
+                                }
+
+                                tile_entity.set_parent(layer_entity_id);
                             } else {
+                                let mut obj_ent = world.spawn_empty();
+
                                 #[cfg(feature = "rapier2d_colliders")]
                                 crate::rapier_colliders::add_colliders(&mut layer_entity, os);
 
                                 #[cfg(feature = "avian2d_colliders")]
-                                crate::avian_colliders::add_colliders(&mut layer_entity, os);
+                                crate::avian_colliders::insert_collider(&mut obj_ent, o);
+
+                                obj_ent.set_parent(layer_entity_id);
                             }
                         },
                     );
@@ -340,7 +347,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             // There may be some situation where it won't just be 0 ?
             SpatialBundle::INHERITED_IDENTITY,
         ));
-        // e_c.push_children(&tile_ents);
+
         e_c.add_children(&layer_ents);
         e_c.set_parent(world_root_id);
         let loaded_scene = scene_load_context.finish(Scene::new(world), None);
