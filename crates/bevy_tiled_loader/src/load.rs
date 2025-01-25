@@ -264,8 +264,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                             // TODO: Many verify, much excite.
                             let world_pos = Vec2::new(
-                                position.0 - scale_factor * tile_size_f32 / 2.,
-                                -(position.1 - scale_factor * tile_size_f32 / 2.),
+                                position.0 - scale_factor.x * tile_size_f32.0 / 2.,
+                                -(position.1 - scale_factor.y * tile_size_f32.1 / 2.),
                             );
 
                             let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
