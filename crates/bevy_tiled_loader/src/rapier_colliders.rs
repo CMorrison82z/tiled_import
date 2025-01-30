@@ -1,11 +1,12 @@
 use bevy::math::{UVec2, Vec2};
 use bevy::prelude::*;
-use bevy::transform::components::{Transform};
+use bevy::transform::components::Transform;
 
+use bevy::utils::HashMap;
 use bevy_rapier2d::prelude::*;
 use bincode::ErrorKind;
 
-use crate::types::{SceneSerializedComponents, Serialized, TiledMapAsset, TiledMapContainer};
+use crate::types::{SceneSerializedComponents, SerializedComponents};
 use tiled_parse::data_types::*;
 
 // TODO:
@@ -14,7 +15,43 @@ pub fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>> {
     bincode::deserialize::<Collider>(b)
 }
 
-pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
+pub(crate) fn insert_collider(
+    e: &mut EntityWorldMut,
+    Object {
+        position: (x, y),
+        size,
+        rotation,
+        otype,
+        ..
+    }: &Object,
+) {
+    let ObjectType::Geometry(gt) = otype else {
+        return;
+    };
+
+    if let GeometryType::Point = gt {
+        return;
+    }
+
+    let (
+        Vec2 {
+            x: offset_x,
+            y: offset_y,
+        },
+        collider,
+    ) = construct_geometry(gt, size.map(|(x, y)| Vec2 { x, y }), None);
+
+    e.insert((
+        Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.)
+            .with_rotation(Quat::from_axis_angle(Vec3::Z, rotation.to_radians())),
+        SerializedComponents(HashMap::from([(
+            SceneSerializedComponents::SerCollider,
+            bincode::serialize(&collider).unwrap(),
+        )])),
+    ));
+}
+
+pub(crate) fn add_child_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
     e.with_children(|cb| {
         os.iter()
             .filter(|o| {
@@ -24,68 +61,39 @@ pub fn add_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
                     false
                 }
             })
-            .for_each(
-                |Object {
-                     position: (x, y),
-                     size,
-                     rotation,
-                     tile_global_id,
-                     visible,
-                     otype,
-                     properties,
-                     ..
-                 }| {
-                    if let ObjectType::Point = otype {
-                        return;
-                    }
-
-                    let (
-                        Vec2 {
-                            x: offset_x,
-                            y: offset_y,
-                        },
-                        collider,
-                    ) = construct_geometry(&otype, size.map(|(x, y)| Vec2 { x, y }), None);
-
-                    cb.spawn((
-                        TransformBundle::from_transform(
-                            Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.).with_rotation(
-                                Quat::from_axis_angle(Vec3::Z, rotation.to_radians()),
-                            ),
-                        ),
-                        Serialized {
-                            data: bincode::serialize(&collider)
-                                .expect("Expected to serialize collider"),
-                            thingy: SceneSerializedComponents::SerCollider,
-                        },
-                    ));
-                },
-            )
+            .for_each(|o| insert_collider(&mut cb.spawn_empty(), o))
     });
 }
 
 fn construct_geometry(
-    shape: &ObjectType,
+    shape: &GeometryType,
     size: Option<Vec2>,
     scale_factor: Option<Vect>,
 ) -> (Vec2, Collider) {
     let scale_factor = scale_factor.unwrap_or(Vect::ONE);
 
     match shape {
-        ObjectType::Rectangle => {
+        GeometryType::Rectangle => {
             let Some(size) = size else { unreachable!() };
             (
                 size / 2. * scale_factor,
                 Collider::cuboid(scale_factor.x * size.x / 2., scale_factor.y * size.y / 2.),
             )
         }
-        ObjectType::Ellipse => {
+        GeometryType::Ellipse => {
             let Some(size) = size else { unreachable!() };
-            // TODO:
-            // If size.x == size.y, then can return a Circle.
-            todo!("Do it");
+            if size.x != size.y {
+                panic!("Ellipses cannot be serialized, so therefore cannot be constructed. To construct a circle, make sure length and width are the same.")
+            };
+
+            (
+                // TODO:
+                // Determine correct offset.
+                size / 2. * scale_factor,
+                Collider::ball(size.x / 2.),
+            )
         }
-        ObjectType::Polygon(points) => (
+        GeometryType::Polygon(points) => (
             Vec2::ZERO,
             Collider::convex_hull(
                 &points
@@ -95,7 +103,7 @@ fn construct_geometry(
             )
             .unwrap(),
         ),
-        ObjectType::Polyline(points) => (
+        GeometryType::Polyline(points) => (
             Vec2::ZERO,
             Collider::polyline(
                 points

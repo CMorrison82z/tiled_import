@@ -221,7 +221,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 // FIXME: Dynamic RigidBody's move independently from the Sprite.
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
                                     #[cfg(feature = "rapier2d_colliders")]
-                                    crate::rapier_colliders::add_colliders(
+                                    crate::rapier_colliders::add_child_colliders(
                                         &mut tile_entity,
                                         &tile_aux_info.objects,
                                     );
@@ -269,7 +269,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                             let world_pos = Vec2::new(
                                 position.0,
-                                -(position.1 - scale_factor.y * tile_size_f32.1 ),
+                                -(position.1 - scale_factor.y * tile_size_f32.1),
                             );
 
                             let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
@@ -307,7 +307,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             // FIXME: Dynamic RigidBody's move independently from the Sprite.
                             if let Some(tile_aux_info) = tile_aux_info_opt {
                                 #[cfg(feature = "rapier2d_colliders")]
-                                crate::rapier_colliders::add_colliders(
+                                crate::rapier_colliders::add_child_colliders(
                                     &mut tile_entity,
                                     &tile_aux_info.objects,
                                 );
@@ -324,7 +324,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             let mut obj_ent = world.spawn_empty();
 
                             #[cfg(feature = "rapier2d_colliders")]
-                            crate::rapier_colliders::add_colliders(&mut layer_entity, os);
+                            crate::rapier_colliders::insert_collider(&mut obj_ent, o);
 
                             #[cfg(feature = "avian2d_colliders")]
                             crate::avian_colliders::insert_collider(&mut obj_ent, o);

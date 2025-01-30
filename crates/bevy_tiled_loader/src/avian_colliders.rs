@@ -6,9 +6,7 @@ use avian2d::prelude::*;
 use bevy::utils::HashMap;
 use bincode::ErrorKind;
 
-use crate::types::{
-    SceneSerializedComponents, SerializedComponents, TiledMapAsset, TiledMapContainer,
-};
+use crate::types::{SceneSerializedComponents, SerializedComponents};
 use tiled_parse::data_types::*;
 
 // TODO:
@@ -17,14 +15,17 @@ pub(crate) fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>>
     bincode::deserialize::<Collider>(b)
 }
 
-pub(crate) fn insert_collider(e: &mut EntityWorldMut, o: &Object) {
-    let Object {
+// TODO: Use `as` pattern on Object
+pub(crate) fn insert_collider(
+    e: &mut EntityWorldMut,
+    Object {
         position: (x, y),
         size,
         rotation,
         otype,
         ..
-    } = o;
+    }: &Object,
+) {
     let ObjectType::Geometry(gt) = otype else {
         return;
     };

@@ -1,8 +1,4 @@
-<!--# ![Tiled Utils](LOGO_URL)-->
-
-<!--[![Bevy Plugin crates.io](CRATES_IO_IMG)](CRATE_URL)-->
-
-Tiled utilities and a AssetLoader for the [Bevy game engine](https://bevyengine.org/).
+Tiled utilities and an AssetLoader for the [Bevy game engine](https://bevyengine.org/).
 
 ---
 
@@ -23,7 +19,7 @@ Add `bevy_tiled_loader` to `Cargo.toml`:
 ```toml
 # For 2D applications:
 [dependencies]
-bevy_tiled_loader = "*" # You should explicitly set the version.
+bevy_tiled_loader = {version = "*", features = "avian2d_colliders"} # You should explicitly set the version.
 ```
 
 Add the plugin and load a `*.tmx`:
@@ -57,17 +53,7 @@ fn spawn_tiled_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 ## Contributing
 
 If you encounter any problems, feel free to open issues or create pull requests.
-For larger changes and additions, it's better to open an issue or ask me for input
-before making a pull request.
 
 ## Acknowledgements
 
 Bevy is awesome.
-
-## License
-
-This crate is free and open source. All code in this repository is dual-licensed under either:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](/LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-
-at your option.
