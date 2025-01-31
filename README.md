@@ -1,5 +1,9 @@
 Tiled utilities and an AssetLoader for the [Bevy game engine](https://bevyengine.org/).
 
+> [!CAUTION]
+> There are still quite a few bugs, missing / un-intuitive functionality, missing docs, etc.
+> Usage, feedback, and contribution will help to improve support.
+
 ---
 
 ## Features
