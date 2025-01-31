@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
 
 use ndarray::Array2;
-use nom_xml::{
+use xml_nom_parse::{
     types::{Tag, Xml},
     *,
 };

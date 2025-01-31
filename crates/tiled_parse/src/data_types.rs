@@ -3,7 +3,7 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use ndarray::Array2;
-use tree::Tree;
+use tiled_parse_tree::Tree;
 
 pub type ID = u32;
 
