@@ -1,15 +1,12 @@
-use std::fs::read_to_string;
 
-use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt, AsyncWriteExt};
-use bevy::asset::{Asset, Handle, LoadContext};
-use bevy::ecs::reflect;
+use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt};
+use bevy::asset::{Handle, LoadContext};
 use bevy::math::{UVec2, Vec2};
 use bevy::prelude::*;
-use bevy::prelude::{SpatialBundle, TransformBundle};
+use bevy::prelude::SpatialBundle;
 use bevy::scene::Scene;
-use bevy::sprite::{Anchor, Sprite, SpriteBundle, TextureAtlas, TextureAtlasLayout};
-use bevy::transform::components::{GlobalTransform, Transform};
-use bevy::utils::hashbrown::HashMap;
+use bevy::sprite::{Anchor, Sprite, TextureAtlas, TextureAtlasLayout};
+use bevy::transform::components::Transform;
 
 #[cfg(feature = "rapier2d_colliders")]
 use bevy_rapier2d::prelude::*;
@@ -136,7 +133,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
     // Load scene
     let scene = {
-        let mut scene_load_context = load_context.begin_labeled_asset();
+        let scene_load_context = load_context.begin_labeled_asset();
         let mut world = World::default();
 
         let world_root_id = world.spawn(SpatialBundle::INHERITED_IDENTITY).id();

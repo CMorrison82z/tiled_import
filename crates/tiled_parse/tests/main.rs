@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 
-use tiled_parse::parse::{self, *};
+use tiled_parse::parse::{*};
 
 #[test]
 fn parse_tmx() {

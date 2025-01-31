@@ -1,10 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
 
 use ndarray::Array2;
-use xml_nom_parse::{
-    types::{Tag, Xml},
-    *,
-};
+use xml_nom_parse::types::{Tag, Xml};
 
 use crate::{
     data_types::*,
