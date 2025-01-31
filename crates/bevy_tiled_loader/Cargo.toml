@@ -9,7 +9,7 @@ rust-version.workspace = true
 repository.workspace = true
 readme.workspace = true
 keywords = ["tiled", "tmx", "parse", "bevy"]
-categories = ["development tools", "game development"]
+categories = ["development-tools", "game-development"]
 
 [features]
 default = []
