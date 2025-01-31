@@ -1,15 +1,15 @@
 [package]
 name = "bevy_tiled_loader"
-version = "0.0.0"
-edition = "2021"
+version = "0.1.0"
 description = "Asset loader for the Tiled data parsed."
-
-# authors.workspace = true
-# edition.workspace = true
-# license.workspace = true
-# rust-version.workspace = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords = ["tiled", "tmx", "parse", "bevy"]
+categories = ["development tools", "game development"]
 
 [dependencies]
 try_match.workspace = true
@@ -23,18 +23,8 @@ serde = "*"
 bincode = "*"
 bevy_rapier2d = { version = "0.28.0", features = ["serde-serialize"], optional = true }
 avian2d = { version = "0.2.0", features = ["serialize"], optional = true }
-# my-dependency.workspace = true
-# other-dev-dependency = "0.1.2"
 
-# [dev-dependencies]
-# my-dependency.workspace = true
-# other-dev-dependency = "1.4.0"
-#
-
-# TODO:
-# default should be no colliders.
 [features]
-default = ["rapier2d_colliders"]
+default = []
 rapier2d_colliders = ["dep:bevy_rapier2d"]
 avian2d_colliders = ["dep:avian2d"]
-# sprite3d = []
