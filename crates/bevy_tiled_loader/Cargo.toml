@@ -24,8 +24,8 @@ bevy = {version = "0.15.1", features = [
   "bevy_sprite",
   "png",
 ]}
-serde = "*"
-bincode = "*"
+serde = "1.0.210"
+bincode = "1.3.3"
 bevy_rapier2d = { version = "0.28.0", features = ["serde-serialize"], optional = true }
 avian2d = { version = "0.2.0", features = ["serialize"], optional = true }
 
