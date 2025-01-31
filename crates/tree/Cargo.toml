@@ -8,5 +8,5 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 readme.workspace = true
-keywords = ["tree", "data structure"]
+keywords = ["tree", "data-structure"]
 categories = ["data structures"]
