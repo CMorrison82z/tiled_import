@@ -1,0 +1,9 @@
+[package]
+name = "tiled_properties_to_components"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+bevy = { version = "0.15", features = ["dynamic_linking"] }
+avian2d = "0.2.0"
+bevy_tiled_loader = { path = "../../crates/bevy_tiled_loader", features = ["avian2d_colliders"] }
