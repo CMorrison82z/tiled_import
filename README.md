@@ -89,7 +89,7 @@ fn reading_tiled_properties_example(
 
 Also, see [load_tiled_components](https://github.com/CMorrison82z/tiled_import/blob/master/crates/bevy_tiled_loader/examples/load_tiled_components.rs) which shows how to extract properties from Tiled objects.
 
-# ![Tiled Map Example](https://raw.githubusercontent.com/CMorrison82z/tiled_import/gh_assets/Tiled_Import_Example.png)
+# ![Tiled Map Example](https://github.com/CMorrison82z/tiled_import/blob/master/gh_assets/Tiled_Import_Example.png)
 
 ## Supported Bevy Versions
 
