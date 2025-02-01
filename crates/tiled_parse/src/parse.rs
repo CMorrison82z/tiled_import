@@ -4,7 +4,7 @@ use ndarray::Array2;
 use xml_nom_parse::types::{Tag, Xml};
 
 use crate::{
-    data_types::*,
+    types::*,
     util::{parse_spaced_f32_pairs, parse_tiles_csv},
 };
 

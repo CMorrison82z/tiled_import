@@ -13,7 +13,7 @@ use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
 use crate::types::{TiledId, TiledMapAsset, TiledMapContainer};
-use tiled_parse::data_types::*;
+use tiled_parse::types::*;
 use tiled_parse::parse::*;
 
 /// Load `*.tmx` via `AssetServer.load("MY_MAP.tmx")`
@@ -89,7 +89,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             tile_stuff,
         } = ts;
 
-        let tiled_parse::data_types::Image {
+        let tiled_parse::types::Image {
             source,
             format,
             dimensions: (columns, rows),

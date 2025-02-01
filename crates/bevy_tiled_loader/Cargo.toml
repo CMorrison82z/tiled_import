@@ -11,6 +11,11 @@ readme.workspace = true
 keywords = ["tiled", "tmx", "parse", "bevy"]
 categories = ["development tools", "game development"]
 
+[features]
+default = []
+rapier2d_colliders = ["dep:bevy_rapier2d"]
+avian2d_colliders = ["dep:avian2d"]
+
 [dependencies]
 try_match.workspace = true
 tiled_parse.workspace = true
@@ -24,7 +29,12 @@ bincode = "*"
 bevy_rapier2d = { version = "0.28.0", features = ["serde-serialize"], optional = true }
 avian2d = { version = "0.2.0", features = ["serialize"], optional = true }
 
-[features]
-default = []
-rapier2d_colliders = ["dep:bevy_rapier2d"]
-avian2d_colliders = ["dep:avian2d"]
+
+[dev-dependencies]
+bevy = { version = "0.15.1", default-features = true }
+avian2d = "0.2.0"
+bevy_rapier2d = "0.28.0"
+
+[[example]]
+name = "load_tiled_components"
+required-features = ["avian2d_colliders"]

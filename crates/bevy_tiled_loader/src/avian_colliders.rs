@@ -7,7 +7,7 @@ use bevy::utils::HashMap;
 use bincode::ErrorKind;
 
 use crate::types::{SceneSerializedComponents, SerializedComponents};
-use tiled_parse::data_types::*;
+use tiled_parse::types::*;
 
 // TODO:
 // Likely can be made more general and convenient

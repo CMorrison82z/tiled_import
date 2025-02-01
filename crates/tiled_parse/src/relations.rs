@@ -1,5 +1,5 @@
 
-use crate::data_types::*;
+use crate::types::*;
 
 pub fn get_tileset_for_gid(tilesets: &[TileSet], Gid(gid): Gid) -> Option<&TileSet> {
     tilesets

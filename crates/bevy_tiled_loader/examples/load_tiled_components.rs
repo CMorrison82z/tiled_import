@@ -1,10 +1,24 @@
+use bevy::prelude::*;
+use bevy_tiled_loader::types::*;
+use bevy_tiled_loader::relations::*;
+use tiled_parse::types::*;
+
 pub fn main() {
     App::new()
         .add_plugins((
+            DefaultPlugins.set(ImagePlugin::default_nearest()),
             bevy_tiled_loader::plugin::TiledScenePlugin::default(),
-            avian2d::PhysicsPlugins::default().with_length_unit(16.0),
-            avian2d::PhysicsDebugPlugin::default(),
+            avian2d::PhysicsPlugins::default(),
+            avian2d::prelude::PhysicsDebugPlugin::default(),
         ))
+        .insert_gizmo_config(
+            avian2d::prelude::PhysicsGizmos {
+                aabb_color: None,
+                collider_color: Some(Color::WHITE),
+                ..Default::default()
+            },
+            GizmoConfig::default(),
+        )
         .add_systems(Startup, setup)
         .add_systems(Update, properties_to_components)
         .run();
@@ -12,8 +26,13 @@ pub fn main() {
 
 pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(
-        TiledMapScene(asset_server.load("demo.tmx")),
+        TiledMapScene(asset_server.load("sample-map.tmx")),
     );
+
+    commands.spawn((
+        Camera2d::default(),
+        Transform::from_xyz(175., -100., 0.).with_scale(0.3 * Vec3::ONE)
+    ));
 }
 
 fn properties_to_components(
@@ -39,35 +58,20 @@ fn properties_to_components(
                         // the tile itself with the object's properties, done like so :
                         let object = tma.map.get_scene_object(*o_id).unwrap();
                         object.properties.iter().chain(
-                            match_ok!(object.otype, ObjectType::Tile(t_guid))
+                            try_match::match_ok!(object.otype, ObjectType::Tile(t_guid))
                                 .and_then(|t_guid| tma.map.get_tile_properties(t_guid))
                                 .iter()
                                 .flat_map(|hm| hm.iter()),
                         )
                     }
                     .for_each(|(k, v)| match k.as_str() {
-                        "spike" => {
+                        "coin" => {
                             entity_commands.insert((
-                                TouchHazard {
-                                    amount: 10.,
-                                    rate: 0.5,
-                                },
-                                ShapeCaster::new(
-                                    avian2d::collision::Collider::rectangle(16., 16.),
-                                    // Tiles are anchored at top left corner, so
-                                    // ShapeCaster needs to be shifted
-                                    8. * Vec2::new(1., -1.),
-                                    0.,
-                                    Dir2::X,
-                                )
-                                .with_max_distance(0.0)
-                                .with_query_filter(
-                                    avian2d::prelude::SpatialQueryFilter::from_mask(
-                                        GameLayer::Player,
-                                    ),
-                                ),
+                                Name::new("GameCoin")
                             ));
-                        }
+                        },
+                        "door" => println!("The door"),
+                        "is_locked" => println!("The door is locked"),
                         _ => println!("Un-implemented object property : {}", k),
                     }),
                     TiledId::Layer(_) => (), // TODO:
@@ -76,4 +80,6 @@ fn properties_to_components(
             })
     })
 }
+
+
 

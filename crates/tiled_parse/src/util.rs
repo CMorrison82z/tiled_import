@@ -10,7 +10,7 @@ use nom::{
     IResult,
 };
 
-use crate::data_types::*;
+use crate::types::*;
 
 fn whitespace<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     take_while(move |c| " \t\r\n".contains(c))(i)

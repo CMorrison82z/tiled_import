@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use tiled_parse::data_types::{Gid, TiledLayer};
+use tiled_parse::types::{Gid, TiledLayer};
 use try_match::match_ok;
 
 use crate::types::{TiledId, TiledMapAsset};

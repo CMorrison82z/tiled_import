@@ -8,7 +8,7 @@ use bevy::sprite::TextureAtlasLayout;
 use bevy::transform::components::Transform;
 use bevy::utils::hashbrown::HashMap;
 
-use tiled_parse::data_types::TiledMap;
+use tiled_parse::types::TiledMap;
 
 /// When the dependencies have loaded, will replace `BufferedMapScene` with a
 /// `SceneRoot(TiledMapAsset.scene)`
@@ -22,10 +22,10 @@ pub struct TiledMapContainer;
 
 #[derive(Component, Reflect)]
 pub enum TiledId {
-    Layer(tiled_parse::data_types::ID),
+    Layer(tiled_parse::types::ID),
     /// Note that this is actually the `Gid` of a tile.
-    Tile(tiled_parse::data_types::ID),
-    Object(tiled_parse::data_types::ID),
+    Tile(tiled_parse::types::ID),
+    Object(tiled_parse::types::ID),
 }
 
 #[derive(TypePath, Asset)]
