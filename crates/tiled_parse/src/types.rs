@@ -172,7 +172,7 @@ pub struct Image {
 }
 
 /// Auxillary information about a tile
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TileAuxInfo {
     // Can contain at most one: <properties>, <image> (since 0.9), <objectgroup>, <animation>
     // pub color: Color,
@@ -183,7 +183,13 @@ pub struct TileAuxInfo {
     pub objects: Vec<Object>,
 }
 
-#[derive(Debug)]
+pub enum TiledMapTileSet {
+    Embedded(TileSet),
+    // FIXME: String -> &str
+    External { first_gid: ID, source: String}
+}
+
+#[derive(Debug, Clone)]
 pub struct TileSet {
     pub tile_size: PairU32,
     pub first_gid: ID,

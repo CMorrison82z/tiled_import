@@ -1,11 +1,10 @@
-
 use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt};
 use bevy::asset::{Handle, LoadContext};
+use bevy::image::{TextureAtlas, TextureAtlasLayout};
 use bevy::math::{UVec2, Vec2};
 use bevy::prelude::*;
-use bevy::prelude::SpatialBundle;
 use bevy::scene::Scene;
-use bevy::sprite::{Anchor, Sprite, TextureAtlas, TextureAtlasLayout};
+use bevy::sprite::{Anchor, Sprite};
 use bevy::transform::components::Transform;
 
 #[cfg(feature = "rapier2d_colliders")]
@@ -13,8 +12,8 @@ use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
 use crate::types::{TiledId, TiledMapAsset, TiledMapContainer};
-use tiled_parse::types::*;
 use tiled_parse::parse::*;
+use tiled_parse::types::*;
 
 /// Load `*.tmx` via `AssetServer.load("MY_MAP.tmx")`
 ///
@@ -49,7 +48,29 @@ impl AssetLoader for TiledLoader {
             )
         })?;
 
-        let tm: TiledMap = parse(data_as_utf8).map_err(|e| {
+        // let path = p
+        //     .to_str()
+        //     .and_then(|p| resolve_path(&ctx, p))
+        //     .ok_or(OpenFileFailed)?;
+        // ctx.read_asset_bytes(path)
+        //     .await
+        //     .map_or(Err(OpenFileFailed), |bytes| {
+        //         tobj::load_mtl_buf(&mut bytes.as_slice())
+        //     })
+
+        let tm: TiledMap = parse(data_as_utf8, &mut |p| {
+            let p2 = resolve_path(&load_context, &p).unwrap().to_string();
+            Box::pin(async {
+                load_context
+                    .begin_labeled_asset()
+                    .read_asset_bytes(p2)
+                    .await
+                    .map(|v| String::from_utf8(v).unwrap())
+                    .map_err(drop)
+            })
+        })
+        .await
+        .map_err(|e| {
             std::io::Error::new(std::io::ErrorKind::Other, format!("Could not load TMX map"))
         })?;
 
@@ -60,6 +81,10 @@ impl AssetLoader for TiledLoader {
         static EXTENSIONS: &[&str] = &["tmx"];
         EXTENSIONS
     }
+}
+
+fn resolve_path<'a>(ctx: &LoadContext, path: &'a str) -> Option<AssetPath<'a>> {
+    ctx.asset_path().parent()?.resolve(path).ok()
 }
 
 fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsset, std::io::Error> {
@@ -136,7 +161,9 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
         let scene_load_context = load_context.begin_labeled_asset();
         let mut world = World::default();
 
-        let world_root_id = world.spawn(SpatialBundle::INHERITED_IDENTITY).id();
+        let world_root_id = world
+            .spawn((Transform::IDENTITY, Visibility::Inherited))
+            .id();
 
         let mut layer_ents = Vec::new();
 
@@ -154,8 +181,10 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                     // TODO:
                     // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
                     // iterator...
-                    let mut spatial_bundle = SpatialBundle::INHERITED_IDENTITY;
-                    spatial_bundle.transform.translation = Vec2::ZERO.extend(i as f32);
+                    let spatial_bundle = (
+                        Transform::from_translation(Vec2::ZERO.extend(i as f32)),
+                        Visibility::Inherited,
+                    );
 
                     let layer_ent = world
                         .spawn((Name::new(name.clone()), spatial_bundle, TiledId::Layer(*id)))
@@ -213,6 +242,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     },
                                     Transform::from_xyz(world_pos_x, world_pos_y, 0.),
                                     TiledId::Tile(tile_gid.0),
+                                    ChildOf(layer_ent),
                                 ));
 
                                 // FIXME: Dynamic RigidBody's move independently from the Sprite.
@@ -229,8 +259,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         &tile_aux_info.objects,
                                     );
                                 }
-
-                                tile_entity.set_parent(layer_ent);
                             },
                         );
                 }
@@ -299,6 +327,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     ))
                                     .with_scale(scale_factor.extend(1.)),
                                 TiledId::Object(*id),
+                                ChildOf(layer_entity_id),
                             ));
 
                             // FIXME: Dynamic RigidBody's move independently from the Sprite.
@@ -315,18 +344,14 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     &tile_aux_info.objects,
                                 );
                             }
-
-                            tile_entity.set_parent(layer_entity_id);
                         } else {
-                            let mut obj_ent = world.spawn_empty();
+                            let mut obj_ent = world.spawn(ChildOf(layer_entity_id));
 
                             #[cfg(feature = "rapier2d_colliders")]
                             crate::rapier_colliders::insert_collider(&mut obj_ent, o);
 
                             #[cfg(feature = "avian2d_colliders")]
                             crate::avian_colliders::insert_collider(&mut obj_ent, o);
-
-                            obj_ent.set_parent(layer_entity_id);
                         }
                     });
                 }
@@ -342,12 +367,14 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             TiledMapContainer,
             // TODO:
             // There may be some situation where it won't just be 0 ?
-            SpatialBundle::INHERITED_IDENTITY,
+            Transform::IDENTITY,
+            Visibility::Inherited,
+            ChildOf(world_root_id),
         ));
 
         e_c.add_children(&layer_ents);
-        e_c.set_parent(world_root_id);
-        let loaded_scene = scene_load_context.finish(Scene::new(world), None);
+
+        let loaded_scene = scene_load_context.finish(Scene::new(world));
         // TODO:
         // Figure out what to use as a label.
         load_context.add_loaded_labeled_asset(MAP_SCENE, loaded_scene)

@@ -19,7 +19,8 @@ avian2d_colliders = ["dep:avian2d"]
 [dependencies]
 try_match.workspace = true
 tiled_parse.workspace = true
-bevy = {version = "0.15.1", features = [
+bevy_platform = "0.16.0"
+bevy = {version = "0.16.0", features = [
   "bevy_asset",
   "bevy_sprite",
   "png",
@@ -31,7 +32,7 @@ avian2d = { version = "0.2.0", features = ["serialize"], optional = true }
 
 
 [dev-dependencies]
-bevy = { version = "0.15.1", default-features = true }
+bevy = { version = "0.16.0", default-features = true }
 avian2d = "0.2.0"
 bevy_rapier2d = "0.28.0"
 

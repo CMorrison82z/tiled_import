@@ -20,11 +20,11 @@ impl Plugin for TiledScenePlugin {
         .add_systems(Update, load_buffered_map)
         .add_observer(
             |trigger: Trigger<OnAdd, SerializedComponents>, query: Query<&SerializedComponents>, mut c: Commands| {
-                let Ok(SerializedComponents (data_map)) = query.get(trigger.entity()) else {
+                let Ok(SerializedComponents (data_map)) = query.get(trigger.target()) else {
                     return;
                 };
 
-                let mut ec = c.entity(trigger.entity());
+                let mut ec = c.entity(trigger.target());
                 ec.remove::<SerializedComponents>();
 
                 data_map.iter().for_each(|(sc, d_bytes)| {

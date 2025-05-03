@@ -4,10 +4,9 @@ use bevy::ecs::component::Component;
 use bevy::prelude::Visibility;
 use bevy::reflect::{Reflect, TypePath};
 use bevy::scene::Scene;
-use bevy::sprite::TextureAtlasLayout;
+use bevy::image::TextureAtlasLayout;
 use bevy::transform::components::Transform;
-use bevy::utils::hashbrown::HashMap;
-
+use bevy_platform::collections::HashMap;
 use tiled_parse::types::TiledMap;
 
 /// When the dependencies have loaded, will replace `BufferedMapScene` with a

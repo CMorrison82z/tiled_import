@@ -1,6 +1,11 @@
-use std::{collections::HashMap, fmt::Debug, str::FromStr};
+// FIXME:
+// Remove various intermediate `collect` with Iterators.
 
+use std::{collections::HashMap, fmt::Debug, future::Future, pin::Pin, str::FromStr};
+
+use futures::future::join_all;
 use ndarray::Array2;
+use try_match::match_ok;
 use xml_nom_parse::types::{Tag, Xml};
 
 use crate::{
@@ -8,13 +13,46 @@ use crate::{
     util::{parse_spaced_f32_pairs, parse_tiles_csv},
 };
 
-pub fn parse<'a>(i: &'a str) -> Result<TiledMap, ()> {
+pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
+// trait FileLoader<'a>: Fn(&'a str) -> BoxFuture<'a, &'a str> {}
+// impl<'a, T: Fn(&'a str) -> BoxFuture<'a, &'a str>> FileLoader<'a> for T {}
+
+pub async fn parse<'a, 'b, F>(i: &'a str, l: &mut F) -> Result<TiledMap, ()>
+where
+    F: FnMut(String) -> BoxFuture<'b, Result<String, ()>>,
+{
     let tmx_root = Xml::from_input_str(i).unwrap();
     let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
-        panic!("oh shit")
+        eprintln!("Room should be an element.");
+        return Err(());
     };
 
-    let tile_sets = get_tile_sets(&elements);
+    // TODO:
+    // Make this less cursed. Be careful of borrow checker.
+    let mut futuresss: Vec<Pin<Box<dyn Future<Output = Result<String, ()>> + Send>>> = vec![];
+    let mut ids: Vec<ID> = vec![];
+    let mut tile_sets = vec![];
+
+    for x in get_tile_sets(&elements).into_iter() {
+        match x {
+            TiledMapTileSet::Embedded(y) => tile_sets.push(y),
+            TiledMapTileSet::External { first_gid, source } => {
+                futuresss.push(l(source));
+                ids.push(first_gid);
+            }
+        }
+    }
+
+    let tile_sets2 = join_all(futuresss)
+        .await
+        .into_iter()
+        .zip(ids.into_iter())
+        .map(|(r, first_gid)| {
+            parse_tile_set(first_gid, &Xml::from_input_str(&r.unwrap()).unwrap()).unwrap()
+        });
+
+    tile_sets.extend(tile_sets2.into_iter());
 
     Ok(TiledMap {
         grid_size: (
@@ -30,15 +68,41 @@ pub fn parse<'a>(i: &'a str) -> Result<TiledMap, ()> {
     })
 }
 
-fn get_tile_sets(elements: &Vec<Xml>) -> Vec<TileSet> {
+/// Specifically parses tiled maps with its tilesets and such embedded in the file itself.
+pub fn parse_embedded<'a>(i: &'a str) -> Result<TiledMap, ()> {
+    let tmx_root = Xml::from_input_str(i).unwrap();
+    let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
+        panic!("oh shit")
+    };
+
+    let tile_sets = get_tile_sets(&elements)
+        .iter()
+        .filter_map(|x| match_ok!(x, TiledMapTileSet::Embedded(y)).cloned())
+        .collect();
+
+    Ok(TiledMap {
+        grid_size: (
+            get_parse::<u32>(&map_tag.attributes, "width").unwrap(),
+            get_parse::<u32>(&map_tag.attributes, "height").unwrap(),
+        ),
+        tile_size: (
+            get_parse::<u32>(&map_tag.attributes, "tilewidth").unwrap(),
+            get_parse::<u32>(&map_tag.attributes, "tileheight").unwrap(),
+        ),
+        layers: parse_layers(&tile_sets, &tmx_root).unwrap(),
+        tile_sets,
+    })
+}
+
+fn get_tile_sets(elements: &Vec<Xml>) -> Vec<TiledMapTileSet> {
     elements
         .iter()
         .filter_map(|x| tile_set_element(&x))
         .collect()
 }
 
-fn tile_set_element(x: &Xml) -> Option<TileSet> {
-    let Xml::Element(t, Some(e)) = x else {
+fn tile_set_element(x: &Xml) -> Option<TiledMapTileSet> {
+    let Xml::Element(t, _) = x else {
         return None;
     };
 
@@ -47,6 +111,21 @@ fn tile_set_element(x: &Xml) -> Option<TileSet> {
     }
 
     let first_gid = get_parse::<u32>(&t.attributes, "firstgid").unwrap();
+
+    if let Some(src) = get_parse::<String>(&t.attributes, "source") {
+        Some(TiledMapTileSet::External {
+            first_gid,
+            source: src,
+        })
+    } else {
+        parse_tile_set(first_gid, x).map(|x| TiledMapTileSet::Embedded(x))
+    }
+}
+
+fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
+    let Xml::Element(t, Some(e)) = x else {
+        return None;
+    };
 
     let tile_size = (
         get_parse::<u32>(&t.attributes, "tilewidth").unwrap(),
