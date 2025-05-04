@@ -52,32 +52,6 @@ pub(crate) fn spaced_f32_pairs<'a, E: ParseError<&'a str> + ContextError<&'a str
 
 pub(crate) fn parse_spaced_f32_pairs<'a>(
     i: &'a str,
-) -> Result<Vec<PairF32>, nom::Err<(&str, ErrorKind)>> {
+) -> Result<Vec<PairF32>, nom::Err<(&'a str, ErrorKind)>> {
     spaced_f32_pairs(i).map(|(_, v)| v)
-}
-
-pub(crate) fn parse_tiles_csv<'a>(i: &'a str) -> Result<Array2<u32>, nom::Err<(&str, ErrorKind)>> {
-    let columns = i
-        .lines()
-        .next()
-        .unwrap()
-        .chars()
-        .filter(|c| *c == ',')
-        .count();
-
-    csv_root::<(&str, ErrorKind)>(i).map(|(_, x)| {
-        // TODO:
-        // Make this better...
-        // let mut rr = ndarray::Array2::from_shape_vec((x.len() / columns, columns), x)
-        //     .unwrap()
-        //     .reversed_axes();
-        // NOTE:
-        // This would flip the y-axis. But I think interpretting the axis is better left for the
-        // user.
-        // rr.invert_axis(ndarray::Axis(1));
-        // rr
-        ndarray::Array2::from_shape_vec((x.len() / columns, columns), x)
-            .unwrap()
-            .reversed_axes()
-    })
 }

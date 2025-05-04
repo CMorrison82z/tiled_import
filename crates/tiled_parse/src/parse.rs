@@ -3,14 +3,17 @@
 
 use std::{collections::HashMap, fmt::Debug, future::Future, pin::Pin, str::FromStr};
 
+use base64::{prelude::BASE64_STANDARD, Engine};
 use futures::future::join_all;
+use itertools::{Either, Itertools};
 use ndarray::Array2;
+use nom::error::ErrorKind;
 use try_match::match_ok;
 use xml_nom_parse::types::{Tag, Xml};
 
 use crate::{
     types::*,
-    util::{parse_spaced_f32_pairs, parse_tiles_csv},
+    util::{csv_root, parse_spaced_f32_pairs},
 };
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -18,7 +21,7 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 // trait FileLoader<'a>: Fn(&'a str) -> BoxFuture<'a, &'a str> {}
 // impl<'a, T: Fn(&'a str) -> BoxFuture<'a, &'a str>> FileLoader<'a> for T {}
 
-pub async fn parse<'a, 'b, F>(i: &'a str, l: &mut F) -> Result<TiledMap, ()>
+pub async fn parse<'a, 'b, F>(i: &'a str, file_loader: &mut F) -> Result<TiledMap, ()>
 where
     F: FnMut(String) -> BoxFuture<'b, Result<String, ()>>,
 {
@@ -28,42 +31,39 @@ where
         return Err(());
     };
 
-    // TODO:
-    // Make this less cursed. Be careful of borrow checker.
-    let mut futuresss: Vec<Pin<Box<dyn Future<Output = Result<String, ()>> + Send>>> = vec![];
-    let mut ids: Vec<ID> = vec![];
-    let mut tile_sets = vec![];
-
-    for x in get_tile_sets(&elements).into_iter() {
-        match x {
-            TiledMapTileSet::Embedded(y) => tile_sets.push(y),
-            TiledMapTileSet::External { first_gid, source } => {
-                futuresss.push(l(source));
-                ids.push(first_gid);
-            }
-        }
-    }
-
-    let tile_sets2 = join_all(futuresss)
-        .await
+    let (mut tile_sets, things): (Vec<_>, Vec<_>) = get_tile_sets(&elements)
         .into_iter()
-        .zip(ids.into_iter())
-        .map(|(r, first_gid)| {
-            parse_tile_set(first_gid, &Xml::from_input_str(&r.unwrap()).unwrap()).unwrap()
+        .partition_map(|x| match x {
+            TiledMapTileSet::Embedded(y) => Either::Left(y),
+            TiledMapTileSet::External { first_gid, source } => {
+                Either::Right((first_gid, file_loader(source)))
+            }
         });
 
-    tile_sets.extend(tile_sets2.into_iter());
+    let (first_gids, file_bytes_futures): (Vec<_>, Vec<_>) = things.into_iter().unzip();
+
+    tile_sets.extend(
+        join_all(file_bytes_futures)
+            .await
+            .into_iter()
+            .zip(first_gids.into_iter())
+            .map(|(r, first_gid)| {
+                parse_tile_set(first_gid, &Xml::from_input_str(&r.unwrap()).unwrap()).unwrap()
+            }),
+    );
+
+    let map_columns = get_parse::<u32>(&map_tag.attributes, "width").unwrap();
 
     Ok(TiledMap {
         grid_size: (
-            get_parse::<u32>(&map_tag.attributes, "width").unwrap(),
+            map_columns,
             get_parse::<u32>(&map_tag.attributes, "height").unwrap(),
         ),
         tile_size: (
             get_parse::<u32>(&map_tag.attributes, "tilewidth").unwrap(),
             get_parse::<u32>(&map_tag.attributes, "tileheight").unwrap(),
         ),
-        layers: parse_layers(&tile_sets, &tmx_root).unwrap(),
+        layers: parse_layers(map_columns, &tile_sets, &tmx_root).unwrap(),
         tile_sets,
     })
 }
@@ -80,16 +80,18 @@ pub fn parse_embedded<'a>(i: &'a str) -> Result<TiledMap, ()> {
         .filter_map(|x| match_ok!(x, TiledMapTileSet::Embedded(y)).cloned())
         .collect();
 
+    let map_columns = get_parse::<u32>(&map_tag.attributes, "width").unwrap();
+
     Ok(TiledMap {
         grid_size: (
-            get_parse::<u32>(&map_tag.attributes, "width").unwrap(),
+            map_columns,
             get_parse::<u32>(&map_tag.attributes, "height").unwrap(),
         ),
         tile_size: (
             get_parse::<u32>(&map_tag.attributes, "tilewidth").unwrap(),
             get_parse::<u32>(&map_tag.attributes, "tileheight").unwrap(),
         ),
-        layers: parse_layers(&tile_sets, &tmx_root).unwrap(),
+        layers: parse_layers(map_columns, &tile_sets, &tmx_root).unwrap(),
         tile_sets,
     })
 }
@@ -246,7 +248,11 @@ where
     hm.get(field).map(|v| v.parse::<T>().ok()).flatten()
 }
 
-fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
+// FIXME:
+// - Recursive function could theoriticaly blow the stack. (Rust does not implement tail-call
+// elimination)
+// - Threading `map_columns` thru the construction is not ideal. (Use in `grid_parse`)
+fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     match x {
         Xml::Element(t, Some(c)) => match t.value.as_str() {
             // This is the base layer (top of the layer hierarchy)
@@ -260,7 +266,9 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                     content: LayerType::Group,
                     properties: parse_tmx_properties(x).unwrap_or_default(),
                 },
-                c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
+                c.iter()
+                    .filter_map(|n_x| parse_layers(map_columns, v, n_x))
+                    .collect(),
             )),
             GROUP_LAYER => Some(LayerHierarchy::Node(
                 parse_layer(
@@ -268,11 +276,10 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
                     LayerType::Group,
                     parse_tmx_properties(x).unwrap_or_default(),
                 ),
-                c.iter().filter_map(|n_x| parse_layers(v, n_x)).collect(),
+                c.iter()
+                    .filter_map(|n_x| parse_layers(map_columns, v, n_x))
+                    .collect(),
             )),
-            // } else {
-            //     LayerHierarchy::Layer(TiledLayer::Group(parse_layer(t)))
-            // }),
             OBJECTGROUP_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
                 LayerType::ObjectLayer(c.iter().filter_map(object_parse).collect()),
@@ -282,7 +289,7 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
             TILE_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
                 LayerType::TileLayer(grid_parse(
-                    v,
+                    map_columns,
                     c.iter()
                         .find(|x| {
                             if let Xml::Element(t, _) = x {
@@ -306,8 +313,8 @@ fn parse_layers(v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
     }
 }
 
-fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Array2<Option<LayerTile>> {
-    let Xml::Element(t, Some(c)) = x else {
+fn grid_parse(map_columns: u32, x: &Xml) -> Array2<Option<LayerTile>> {
+    let Xml::Element(Tag { attributes, .. }, Some(c)) = x else {
         panic!()
     };
 
@@ -315,25 +322,46 @@ fn grid_parse(v: &Vec<TileSet>, x: &Xml) -> Array2<Option<LayerTile>> {
         panic!("Only csv is supported")
     };
 
-    // TODO:
-    // Parse text into vec<gid>
+    if attributes.contains_key("compression") {
+        panic!("Compression is not supported. I recommend compressing the entire `tmx` if you need compression, not just the data.")
+    }
 
-    parse_tiles_csv(s.as_str())
-        .unwrap()
-        .map(|gid| parse_tile_from_gid(v, gid))
+    let gids = match attributes
+        .get("encoding")
+        .map(|x| x.as_str())
+        .expect("Map data should specify `encoding`")
+    {
+        "base64" => BASE64_STANDARD
+            .decode(s)
+            .expect("Should decode data bytes")
+            .chunks(4)
+            .map(|bytes_chunk| u32::from_le_bytes(bytes_chunk.try_into().unwrap()))
+            .collect(),
+        "csv" => csv_root::<(&str, ErrorKind)>(s).unwrap().1,
+        _ => panic!("Invalid encoding"),
+    };
+
+    let cols_usize = map_columns as usize;
+
+    ndarray::Array2::from_shape_vec(
+        (gids.len() / cols_usize, cols_usize),
+        gids.iter().map(|gid| parse_tile_from_gid(gid)).collect(),
+    )
+    .unwrap()
+    .reversed_axes()
 }
 
 // NOTE:
 // Maybe use later to support xml elements, but probably not...
-fn parse_tile(tilesets: &Vec<TileSet>, x: &Xml) -> Option<LayerTile> {
-    let Xml::Element(t, _) = x else { return None };
+// fn parse_tile(tilesets: &Vec<TileSet>, x: &Xml) -> Option<LayerTile> {
+//     let Xml::Element(t, _) = x else { return None };
+//
+//     let bits: u32 = t.attributes.get("gid").unwrap().parse().unwrap();
+//
+//     parse_tile_from_gid(&bits)
+// }
 
-    let bits: u32 = t.attributes.get("gid").unwrap().parse().unwrap();
-
-    parse_tile_from_gid(tilesets, &bits)
-}
-
-fn parse_tile_from_gid(tilesets: &Vec<TileSet>, bits: &u32) -> Option<LayerTile> {
+fn parse_tile_from_gid(bits: &u32) -> Option<LayerTile> {
     let flags = bits & ALL_FLIP_FLAGS;
 
     let gid = Gid(bits & !ALL_FLIP_FLAGS);
@@ -412,7 +440,6 @@ fn object_parse(x: &Xml) -> Option<Object> {
                         })
                         .unwrap_or(ObjectType::Geometry(GeometryType::Rectangle)),
                     None => ObjectType::Geometry(GeometryType::Rectangle),
-                    // TODO:
                 }
             }
         }, // If there is no object type in the xml, it's a Rectangle
@@ -420,8 +447,6 @@ fn object_parse(x: &Xml) -> Option<Object> {
     })
 }
 
-// TODO:
-// Include `properties`
 fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLayer {
     TiledLayer {
         id: get_parse(&t.attributes, "id").unwrap(),

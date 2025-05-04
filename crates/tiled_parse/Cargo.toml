@@ -16,6 +16,8 @@ ndarray.workspace = true
 try_match.workspace = true
 # TODO: Put behind a feature flag 'external_tile_set'
 futures.workspace = true
+itertools.workspace = true
 tiled_parse_tree.workspace = true
 nom = "7.1.3"
+base64 = "^0.22.1"
 xml_nom_parse = "0.1.0"

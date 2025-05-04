@@ -9,8 +9,7 @@ use bevy::transform::components::Transform;
 use bevy_platform::collections::HashMap;
 use tiled_parse::types::TiledMap;
 
-/// When the dependencies have loaded, will replace `BufferedMapScene` with a
-/// `SceneRoot(TiledMapAsset.scene)`
+/// When the dependencies have loaded, will add `SceneRoot(TiledMapAsset.scene)` with `TiledMapScene`
 #[derive(Component)]
 #[require(Transform, Visibility)]
 pub struct TiledMapScene(pub Handle<TiledMapAsset>);
