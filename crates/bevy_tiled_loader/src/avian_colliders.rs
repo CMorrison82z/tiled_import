@@ -1,9 +1,9 @@
-use bevy::math::{UVec2, Vec2};
+use bevy::math::Vec2;
 use bevy::prelude::*;
 use bevy::transform::components::Transform;
 
 use avian2d::prelude::*;
-use bevy::utils::HashMap;
+use bevy_platform::collections::HashMap;
 use bincode::ErrorKind;
 
 use crate::types::{SceneSerializedComponents, SerializedComponents};

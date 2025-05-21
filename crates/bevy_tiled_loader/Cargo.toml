@@ -28,12 +28,12 @@ bevy = {version = "0.16.0", features = [
 serde = "1.0.210"
 bincode = "1.3.3"
 bevy_rapier2d = { version = "0.28.0", features = ["serde-serialize"], optional = true }
-avian2d = { version = "0.2.0", features = ["serialize"], optional = true }
+avian2d = { version = "0.3.0", features = ["serialize"], optional = true }
 
 
 [dev-dependencies]
 bevy = { version = "0.16.0", default-features = true }
-avian2d = "0.2.0"
+avian2d = "0.3.0"
 bevy_rapier2d = "0.28.0"
 
 [[example]]
