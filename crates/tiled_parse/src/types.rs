@@ -208,7 +208,7 @@ pub struct TileSet {
 
 pub type LayerHierarchy = Tree<TiledLayer>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TiledMap {
     pub layers: LayerHierarchy,
     /// Measured in tiles.
