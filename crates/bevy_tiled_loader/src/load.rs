@@ -345,7 +345,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 );
                             }
                         } else {
-                            let mut obj_ent = world.spawn(ChildOf(layer_entity_id));
+                            let mut obj_ent = world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));
 
                             #[cfg(feature = "rapier2d_colliders")]
                             crate::rapier_colliders::insert_collider(&mut obj_ent, o);
