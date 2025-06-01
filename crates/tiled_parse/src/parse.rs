@@ -304,6 +304,7 @@ fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHier
             ))),
             IMAGE_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
+                // TODO:
                 LayerType::ImageLayer(todo!()),
                 parse_tmx_properties(x).unwrap_or_default(),
             ))),
