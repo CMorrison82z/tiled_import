@@ -2,4 +2,5 @@
 /my_notes
 *.lock
 .envrc
+.cargo
 .direnv

@@ -15,10 +15,10 @@ use tiled_parse::types::TiledMap;
 pub struct TiledMapScene(pub Handle<TiledMapAsset>);
 
 /// Marker type for a Tiled Map
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Copy, Clone, Debug)]
 pub struct TiledMapContainer;
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Copy, Clone, Debug)]
 pub enum TiledId {
     Layer(tiled_parse::types::ID),
     /// Note that this is actually the `Gid` of a tile.
@@ -49,10 +49,10 @@ pub struct TiledMapAsset {
 /// `RigidBody`, they have a lot of required Components, so deserializing them once they've been
 /// added to the main App where its required Components are in the type registry is more
 /// convenient. This is likely subject to change.
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Debug)]
 pub struct SerializedComponents(pub HashMap<SceneSerializedComponents, Vec<u8>>);
 
-#[derive(Reflect, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Reflect, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum SceneSerializedComponents {
     SerCollider,
     SerRigidBody,
