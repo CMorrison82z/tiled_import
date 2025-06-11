@@ -26,6 +26,15 @@ pub enum TiledId {
     Object(tiled_parse::types::ID),
 }
 
+#[derive(Component, Reflect, Copy, Clone, Debug)]
+pub struct TiledIndex(pub u32, pub u32);
+
+impl Into<(u32, u32)> for TiledIndex {
+    fn into(self) -> (u32, u32) {
+        (self.0, self.1)
+    }
+}
+
 #[derive(TypePath, Asset)]
 pub struct TiledMapAsset {
     pub map: TiledMap,

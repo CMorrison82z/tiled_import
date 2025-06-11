@@ -11,7 +11,7 @@ use bevy::transform::components::Transform;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
-use crate::types::{TiledId, TiledMapAsset, TiledMapContainer};
+use crate::types::{TiledId, TiledIndex, TiledMapAsset, TiledMapContainer};
 use tiled_parse::parse::*;
 use tiled_parse::types::*;
 
@@ -240,6 +240,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         anchor: Anchor::TopLeft,
                                         ..Default::default()
                                     },
+                                    TiledIndex(tile_pos.0.try_into().unwrap(), tile_pos.1.try_into().unwrap()),
                                     Transform::from_xyz(world_pos_x, world_pos_y, 0.),
                                     TiledId::Tile(tile_gid.0),
                                     ChildOf(layer_ent),
