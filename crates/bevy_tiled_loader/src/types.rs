@@ -29,8 +29,8 @@ pub enum TiledId {
 #[derive(Component, Reflect, Copy, Clone, Debug)]
 pub struct TiledIndex(pub usize, pub usize);
 
-impl Into<(u32, u32)> for TiledIndex {
-    fn into(self) -> (u32, u32) {
+impl Into<(usize, usize)> for TiledIndex {
+    fn into(self) -> (usize, usize) {
         (self.0, self.1)
     }
 }
