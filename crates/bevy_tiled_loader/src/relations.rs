@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use tiled_parse::types::{Gid, TiledLayer};
+use tiled_parse::{relations::{get_tile_id, get_tileset_for_gid}, types::{Gid, TiledLayer}};
 use try_match::match_ok;
 
 use crate::types::{TiledId, TiledMapAsset};
@@ -31,9 +31,9 @@ pub fn get_layer_from_id(a: &TiledMapAsset, t_id: TiledId) -> Option<&TiledLayer
 }
 
 pub fn get_tile_sprite(a: &TiledMapAsset, t_gid: Gid) -> Sprite {
-    let tile_sets = a.map.tile_sets;
+    let tile_sets = &a.map.tile_sets;
 
-    let tile_tileset = get_tileset_for_gid(tile_sets, t_gid)
+    let tile_tileset = get_tileset_for_gid(&tile_sets, t_gid)
         .expect("Tile should belong to tileset");
 
     let tileset_index = tile_sets
@@ -41,7 +41,7 @@ pub fn get_tile_sprite(a: &TiledMapAsset, t_gid: Gid) -> Sprite {
         .position(|ts| ts.first_gid == tile_tileset.first_gid)
         .expect("Yes");
 
-    let local_tile_id = get_tile_id(tile_tileset, t_gid);
+    let local_tile_id = get_tile_id(&tile_tileset, t_gid);
 
     Sprite {
         image: a.tilemap_textures.get(tileset_index).unwrap().clone(),
@@ -49,7 +49,7 @@ pub fn get_tile_sprite(a: &TiledMapAsset, t_gid: Gid) -> Sprite {
             layout: a.tilemap_atlases.get(tileset_index).unwrap().clone(),
             index: local_tile_id as usize,
         }),
-        anchor: Anchor::TopLeft,
+        anchor: bevy::sprite::Anchor::TopLeft,
         ..Default::default()
     }
 }
