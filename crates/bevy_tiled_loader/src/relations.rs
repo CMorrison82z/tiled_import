@@ -24,12 +24,35 @@ pub fn get_tiled_map_with_scene<'a>(
 }
 
 /// Given a `TiledLayer` from a `TiledMapAsset`.
-pub fn get_layer_from_id(a: &TiledMapAsset, tid: TiledId) -> Option<&TiledLayer> {
-    let id = match_ok!(tid, TiledId::Layer(x))?;
+pub fn get_layer_from_id(a: &TiledMapAsset, t_id: TiledId) -> Option<&TiledLayer> {
+    let id = match_ok!(t_id, TiledId::Layer(x))?;
 
     a.map.get_layer_from_id(id)
 }
 
+pub fn get_tile_sprite(a: &TiledMapAsset, t_gid: Gid) -> Sprite {
+    let tile_sets = a.map.tile_sets;
+
+    let tile_tileset = get_tileset_for_gid(tile_sets, t_gid)
+        .expect("Tile should belong to tileset");
+
+    let tileset_index = tile_sets
+        .iter()
+        .position(|ts| ts.first_gid == tile_tileset.first_gid)
+        .expect("Yes");
+
+    let local_tile_id = get_tile_id(tile_tileset, t_gid);
+
+    Sprite {
+        image: a.tilemap_textures.get(tileset_index).unwrap().clone(),
+        texture_atlas: Some(TextureAtlas {
+            layout: a.tilemap_atlases.get(tileset_index).unwrap().clone(),
+            index: local_tile_id as usize,
+        }),
+        anchor: Anchor::TopLeft,
+        ..Default::default()
+    }
+}
 impl TiledId {
     pub fn as_tile_gid(&self) -> Option<Gid> {
         match_ok!(self, TiledId::Tile(x)).map(|&id| Gid(id))
