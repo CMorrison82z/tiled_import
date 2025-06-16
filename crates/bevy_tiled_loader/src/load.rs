@@ -169,10 +169,10 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
         let tile_size_f32 = (tile_size.0 as f32, tile_size.1 as f32);
 
-        layers.iter_breadth().enumerate().for_each(|(i, x)| {
-            let TiledLayer {
-                id, name, content, ..
-            } = x;
+        layers.iter_breadth().enumerate().for_each(|(i, TiledLayer {
+                id, name, content, visible, ..
+            })| {
+            if !visible {return};
 
             match content {
                 // TODO:
