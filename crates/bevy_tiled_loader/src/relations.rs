@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use tiled_parse::{relations::{get_tile_id, get_tileset_for_gid}, types::{Gid, TiledLayer}};
+use tiled_parse::{relations::{get_tile_id, get_tileset_for_gid}, types::{AnimationFrame, Gid, TiledLayer}};
 use try_match::match_ok;
 
-use crate::types::{TiledId, TiledMapAsset};
+use crate::types::*;
 
 /// Given a `TiledMapAsset`, returns `Entity`'s with a SceneRoot containing `TiledMapAsset.scene`.
 pub fn get_entities_with_tiled_map(
@@ -53,8 +53,50 @@ pub fn get_tile_sprite(a: &TiledMapAsset, t_gid: Gid) -> Sprite {
         ..Default::default()
     }
 }
+
 impl TiledId {
     pub fn as_tile_gid(&self) -> Option<Gid> {
         match_ok!(self, TiledId::Tile(x)).map(|&id| Gid(id))
+    }
+}
+
+impl TiledAnimation {
+    /// Is `None` if the time has elapsed beyond the duration of the final frame.
+    pub fn get_current_tile(&self, now_secs: f32) -> Option<tiled_parse::types::ID> {
+        self.animation.iter().enumerate().scan(self.start_time, |acc_t, (i, &AnimationFrame {tile_id, duration})| {
+            if *acc_t <= now_secs {
+                *acc_t += duration;
+
+                // If it is the last frame and the time has elapsed beyond the duration of the last
+                // frame, then we've gone past the length of the animation.
+                if i == (self.animation.len() - 1) && now_secs > *acc_t {
+                    Some(None)
+                } else {
+                    Some(Some(tile_id))
+                }
+            } else {
+                None
+            }
+        }).last().flatten()
+    }
+    /// Cycles the animation for time that has exceeded the full length of the animation
+    pub fn get_current_tile_cycle(&self, now_secs: f32) -> tiled_parse::types::ID {
+        let remainder = now_secs % self.get_net_duration();
+
+        // NOTE:
+        // Looks similar to `get_current_tile`, but has less checks and doesn't need to enumerate
+        // the iterator.
+        self.animation.iter().scan(self.start_time, |acc_t, &AnimationFrame {tile_id, duration}| {
+            if *acc_t <= (self.start_time + remainder) {
+                *acc_t += duration;
+
+                Some(tile_id)
+            } else {
+                None
+            }
+        }).last().unwrap()
+    }
+    pub fn get_net_duration(&self) -> f32 {
+        self.animation.iter().map(|af| af.duration).sum()
     }
 }

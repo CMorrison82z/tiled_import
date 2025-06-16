@@ -1,48 +1,71 @@
 use crate::{load::TiledLoader, types::*};
 use bevy::prelude::*;
 
-#[derive(Default)]
 pub struct TiledScenePlugin {
-    // TODO:
-    // Various options should be made available.
+    pub auto_play_animations: bool,
+}
+
+impl Default for TiledScenePlugin {
+    fn default() -> Self {
+        TiledScenePlugin {
+            auto_play_animations: true
+        }
+    }
 }
 
 impl Plugin for TiledScenePlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<TiledMapContainer>()
-        .register_type::<SerializedComponents>()
-        .register_type::<TiledId>()
-        .register_type_data::<TiledId, ReflectComponent>()
-        .register_type_data::<TiledMapContainer, ReflectComponent>()
-        .register_type_data::<SerializedComponents, ReflectComponent>()
-        .init_asset::<TiledMapAsset>()
-        .init_asset_loader::<TiledLoader>()
-        .add_systems(Update, load_buffered_map)
-        .add_observer(
-            |trigger: Trigger<OnAdd, SerializedComponents>, query: Query<&SerializedComponents>, mut c: Commands| {
-                let Ok(SerializedComponents (data_map)) = query.get(trigger.target()) else {
-                    return;
-                };
+            .register_type::<SerializedComponents>()
+            .register_type::<TiledId>()
+            .register_type_data::<TiledId, ReflectComponent>()
+            .register_type_data::<TiledMapContainer, ReflectComponent>()
+            .register_type_data::<SerializedComponents, ReflectComponent>()
+            .init_asset::<TiledMapAsset>()
+            .init_asset_loader::<TiledLoader>()
+            .add_systems(Update, load_buffered_map)
+            .add_observer(
+                |trigger: Trigger<OnAdd, SerializedComponents>,
+                 query: Query<&SerializedComponents>,
+                 mut c: Commands| {
+                    let Ok(SerializedComponents(data_map)) = query.get(trigger.target()) else {
+                        return;
+                    };
 
-                let mut ec = c.entity(trigger.target());
-                ec.remove::<SerializedComponents>();
+                    let mut ec = c.entity(trigger.target());
+                    ec.remove::<SerializedComponents>();
 
-                data_map.iter().for_each(|(sc, d_bytes)| {
-                    match *sc {
+                    data_map.iter().for_each(|(sc, d_bytes)| match *sc {
                         #[cfg(feature = "rapier2d_colliders")]
-                        SceneSerializedComponents::SerCollider  => {ec.insert(crate::rapier_colliders::deserialize_collider(&d_bytes).unwrap());},
+                        SceneSerializedComponents::SerCollider => {
+                            ec.insert(
+                                crate::rapier_colliders::deserialize_collider(&d_bytes).unwrap(),
+                            );
+                        }
                         #[cfg(feature = "avian2d_colliders")]
-                        SceneSerializedComponents::SerCollider  => {ec.insert(crate::avian_colliders::deserialize_collider(&d_bytes).unwrap());},
+                        SceneSerializedComponents::SerCollider => {
+                            ec.insert(
+                                crate::avian_colliders::deserialize_collider(&d_bytes).unwrap(),
+                            );
+                        }
                         #[cfg(feature = "avian2d_colliders")]
-                        SceneSerializedComponents::SerRigidBody => {ec.insert(bincode::deserialize::<avian2d::prelude::RigidBody>(&d_bytes).unwrap());},
+                        SceneSerializedComponents::SerRigidBody => {
+                            ec.insert(
+                                bincode::deserialize::<avian2d::prelude::RigidBody>(&d_bytes)
+                                    .unwrap(),
+                            );
+                        }
                         _ => unimplemented!(),
-                    }
-                });
-            },
-        );
+                    });
+                },
+            );
 
-    #[cfg(feature = "avian2d_colliders")]
-    app.register_type::<avian2d::prelude::RigidBody>();
+        if self.auto_play_animations {
+            app.add_systems(Update, run_animations);
+        }
+
+        #[cfg(feature = "avian2d_colliders")]
+        app.register_type::<avian2d::prelude::RigidBody>();
     }
 }
 
@@ -65,4 +88,17 @@ fn load_buffered_map(
 
             e_c.insert(SceneRoot(tma.scene.clone()));
         })
+}
+
+fn run_animations(
+    mut q: Query<(&mut Sprite, &TiledAnimation)>,
+    t: Res<Time>
+) {
+    q.iter_mut().for_each(|(mut s, ta)| {
+        let current_id = ta.get_current_tile_cycle(t.elapsed_secs()) as usize;
+
+        if s.texture_atlas.as_ref().unwrap().index != current_id {
+            s.texture_atlas.as_mut().unwrap().index = current_id;
+        }
+    })
 }

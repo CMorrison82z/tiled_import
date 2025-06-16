@@ -179,6 +179,12 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
                 };
                 let id = get_parse::<u32>(&tile_tag.attributes, "id")?;
                 let properties = parse_tmx_properties(x).unwrap_or_default();
+                let animation = tile_elems
+                    .iter()
+                    .find(|t_e| t_e.tag_has_name("animation"))
+                    .map(|anim_xml| {
+                        parse_animation(anim_xml)
+                    });
                 let objects = tile_elems
                     .iter()
                     .find(|t_e| t_e.tag_has_name("objectgroup"))
@@ -199,6 +205,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
                     TileAuxInfo {
                         properties,
                         objects,
+                        animation
                     },
                 ))
             })
@@ -464,4 +471,22 @@ fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLaye
         // repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
         properties,
     }
+}
+
+fn parse_animation(x: &Xml) -> Animation {
+    let Xml::Element(_, Some(v)) = x else {
+        return vec![];
+    };
+
+    v.iter()
+        .filter(|n_x| n_x.tag_has_name("frame"))
+        .map(|xml_element| match xml_element {
+            Xml::Element(tag, _) => {
+                AnimationFrame {
+                    tile_id: get_parse(&tag.attributes, "tileid").unwrap(),
+                    duration: get_parse(&tag.attributes, "duration").unwrap(),
+                }
+            }
+            _ => unreachable!(),
+        }).collect()
 }

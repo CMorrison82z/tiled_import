@@ -171,12 +171,20 @@ pub struct Image {
     // pub color: Color
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct AnimationFrame {
+    pub tile_id: ID,
+    pub duration: f32
+}
+
+pub type Animation = Vec<AnimationFrame>;
+
 /// Auxillary information about a tile
 #[derive(Debug, Clone)]
 pub struct TileAuxInfo {
     // Can contain at most one: <properties>, <image> (since 0.9), <objectgroup>, <animation>
     // pub color: Color,
-    // pub animation: ObjectGroup,
+    pub animation: Option<Animation>,
     pub properties: Properties,
     /// NOTE:
     /// This departure from Tiled's file specification. I don't like the idea of encoding the objects as an entire layer.

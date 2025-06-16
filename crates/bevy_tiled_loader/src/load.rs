@@ -11,7 +11,7 @@ use bevy::transform::components::Transform;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
 
-use crate::types::{TiledId, TiledIndex, TiledMapAsset, TiledMapContainer};
+use crate::types::*;
 use tiled_parse::parse::*;
 use tiled_parse::types::*;
 
@@ -259,6 +259,31 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                         &mut tile_entity,
                                         &tile_aux_info.objects,
                                     );
+
+                                    if let Some(animation) = &tile_aux_info.animation {
+                                        let AnimationFrame { tile_id, .. } = animation[0];
+
+                                        tile_entity.insert((
+                                            Sprite {
+                                                image: tilemap_textures.get(tileset_index).unwrap().clone(),
+                                                texture_atlas: Some(TextureAtlas {
+                                                    layout: tilemap_atlases
+                                                        .get(tileset_index)
+                                                        .unwrap()
+                                                        .clone(),
+                                                    index: tile_id as usize,
+                                                }),
+                                                flip_x: flip_h,
+                                                flip_y: flip_v,
+                                                anchor: Anchor::TopLeft,
+                                                ..Default::default()
+                                            },
+                                            TiledAnimation {
+                                                animation: animation.clone(),
+                                                start_time: 0.
+                                            }
+                                        ));
+                                    }
                                 }
                             },
                         );

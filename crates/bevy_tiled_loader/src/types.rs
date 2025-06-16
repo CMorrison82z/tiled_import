@@ -7,7 +7,6 @@ use bevy::scene::Scene;
 use bevy::image::TextureAtlasLayout;
 use bevy::transform::components::Transform;
 use bevy_platform::collections::HashMap;
-use tiled_parse::types::TiledMap;
 
 /// When the dependencies have loaded, will add `SceneRoot(TiledMapAsset.scene)` with `TiledMapScene`
 #[derive(Component)]
@@ -35,9 +34,15 @@ impl Into<(usize, usize)> for TiledIndex {
     }
 }
 
+#[derive(Component, Clone, Debug)]
+pub struct TiledAnimation {
+    pub animation: tiled_parse::types::Animation,
+    pub start_time: f32
+}
+
 #[derive(TypePath, Asset)]
 pub struct TiledMapAsset {
-    pub map: TiledMap,
+    pub map: tiled_parse::types::TiledMap,
 
     // TODO:
     // pub colliders: todo!(),
