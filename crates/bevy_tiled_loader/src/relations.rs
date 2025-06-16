@@ -60,12 +60,14 @@ impl TiledId {
     }
 }
 
+// TODO:
+// All functions convert to secs (from milli-secs). Wasteful computation.
 impl TiledAnimation {
     /// Is `None` if the time has elapsed beyond the duration of the final frame.
     pub fn get_current_tile(&self, now_secs: f32) -> Option<tiled_parse::types::ID> {
         self.animation.iter().enumerate().scan(self.start_time, |acc_t, (i, &AnimationFrame {tile_id, duration})| {
             if *acc_t <= now_secs {
-                *acc_t += duration;
+                *acc_t += duration / 1000.;
 
                 // If it is the last frame and the time has elapsed beyond the duration of the last
                 // frame, then we've gone past the length of the animation.
@@ -88,7 +90,7 @@ impl TiledAnimation {
         // the iterator.
         self.animation.iter().scan(self.start_time, |acc_t, &AnimationFrame {tile_id, duration}| {
             if *acc_t <= (self.start_time + remainder) {
-                *acc_t += duration;
+                *acc_t += duration / 1000.;
 
                 Some(tile_id)
             } else {
@@ -97,6 +99,6 @@ impl TiledAnimation {
         }).last().unwrap()
     }
     pub fn get_net_duration(&self) -> f32 {
-        self.animation.iter().map(|af| af.duration).sum()
+        self.animation.iter().map(|af| af.duration / 1000.).sum()
     }
 }
