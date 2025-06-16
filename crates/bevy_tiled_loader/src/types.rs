@@ -2,11 +2,13 @@
 use bevy::asset::{Asset, Handle};
 use bevy::ecs::component::Component;
 use bevy::prelude::Visibility;
-use bevy::reflect::{Reflect, TypePath};
+use bevy::reflect::{impl_reflect, Reflect, TypePath};
 use bevy::scene::Scene;
 use bevy::image::TextureAtlasLayout;
 use bevy::transform::components::Transform;
 use bevy_platform::collections::HashMap;
+
+use tiled_parse::types::*;
 
 /// When the dependencies have loaded, will add `SceneRoot(TiledMapAsset.scene)` with `TiledMapScene`
 #[derive(Component)]
@@ -34,10 +36,24 @@ impl Into<(usize, usize)> for TiledIndex {
     }
 }
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Reflect, Clone, Debug)]
 pub struct TiledAnimation {
-    pub animation: tiled_parse::types::Animation,
+    pub animation: Vec<AnimationFrameReflect>,
     pub start_time: f32
+}
+
+// TODO:
+// Try to impl reflect on foreign type `tiled_parse::AnimationFrame`
+#[derive(Reflect, Copy, Clone, Debug)]
+pub struct AnimationFrameReflect {
+    pub tile_id: ID,
+    pub duration: f32
+}
+
+impl From<AnimationFrame> for AnimationFrameReflect {
+    fn from(AnimationFrame { tile_id, duration }: AnimationFrame) -> Self {
+        Self { tile_id, duration }
+    }
 }
 
 #[derive(TypePath, Asset)]

@@ -279,7 +279,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                                 ..Default::default()
                                             },
                                             TiledAnimation {
-                                                animation: animation.clone(),
+                                                animation: animation.into_iter().map(|&f| f.into()).collect(),
                                                 start_time: 0.
                                             }
                                         ));

@@ -65,7 +65,7 @@ impl TiledId {
 impl TiledAnimation {
     /// Is `None` if the time has elapsed beyond the duration of the final frame.
     pub fn get_current_tile(&self, now_secs: f32) -> Option<tiled_parse::types::ID> {
-        self.animation.iter().enumerate().scan(self.start_time, |acc_t, (i, &AnimationFrame {tile_id, duration})| {
+        self.animation.iter().enumerate().scan(self.start_time, |acc_t, (i, &AnimationFrameReflect {tile_id, duration})| {
             if *acc_t <= now_secs {
                 *acc_t += duration / 1000.;
 
@@ -88,7 +88,7 @@ impl TiledAnimation {
         // NOTE:
         // Looks similar to `get_current_tile`, but has less checks and doesn't need to enumerate
         // the iterator.
-        self.animation.iter().scan(self.start_time, |acc_t, &AnimationFrame {tile_id, duration}| {
+        self.animation.iter().scan(self.start_time, |acc_t, &AnimationFrameReflect {tile_id, duration}| {
             if *acc_t <= (self.start_time + remainder) {
                 *acc_t += duration / 1000.;
 
