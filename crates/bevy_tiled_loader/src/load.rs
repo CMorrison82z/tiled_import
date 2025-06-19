@@ -169,7 +169,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
         let tile_size_f32 = (tile_size.0 as f32, tile_size.1 as f32);
 
-        layers.iter_breadth().enumerate().for_each(|(i, TiledLayer {
+        layers.iter_depth().enumerate().for_each(|(i, TiledLayer {
                 id, name, content, visible, ..
             })| {
             if !visible {return};
@@ -179,8 +179,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                 // Handle other layer types
                 LayerType::TileLayer(tile_layer) => {
                     // TODO:
-                    // Assigning z-index to `i` won't work for GroupLayers because `layers` currently iterate as a breadth first
-                    // iterator...
+                    // Review if just setting the z-coordeinate to the iter-index is good.
                     let spatial_bundle = (
                         Transform::from_translation(Vec2::ZERO.extend(i as f32)),
                         Visibility::Inherited,

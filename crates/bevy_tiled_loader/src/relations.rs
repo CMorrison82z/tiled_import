@@ -54,6 +54,41 @@ pub fn get_tile_sprite(a: &TiledMapAsset, t_gid: Gid) -> Sprite {
     }
 }
 
+// FIXME:
+// This function will be deprecated when `TiledAnimation` becomes an Asset.
+//
+/// Returns the Sprite as well, because it would be a lot of duplicate work to get the Sprite
+/// separately
+pub fn get_animation(a: &TiledMapAsset, t_gid: Gid, start_time_secs: f32) -> Option<(TiledAnimation, Sprite)> {
+    let tile_sets = &a.map.tile_sets;
+
+    let tile_tileset = get_tileset_for_gid(&tile_sets, t_gid)?;
+
+    let tileset_index = tile_sets
+        .iter()
+        .position(|ts| ts.first_gid == tile_tileset.first_gid)?;
+
+    let local_tile_id = get_tile_id(&tile_tileset, t_gid);
+
+    let animation = tile_tileset.tile_stuff.get(&local_tile_id)?.animation.as_ref()?;
+
+    Some((
+        TiledAnimation {
+            animation: animation.into_iter().map(|&af| af.into()).collect(),
+            start_time: start_time_secs
+        },
+        Sprite {
+            image: a.tilemap_textures.get(tileset_index).unwrap().clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: a.tilemap_atlases.get(tileset_index).unwrap().clone(),
+                index: animation[0].tile_id as usize,
+            }),
+            anchor: bevy::sprite::Anchor::TopLeft,
+            ..Default::default()
+        }
+    ))
+}
+
 impl TiledId {
     pub fn as_tile_gid(&self) -> Option<Gid> {
         match_ok!(self, TiledId::Tile(x)).map(|&id| Gid(id))

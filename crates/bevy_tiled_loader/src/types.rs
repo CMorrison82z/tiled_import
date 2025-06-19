@@ -1,4 +1,3 @@
-
 use bevy::asset::{Asset, Handle};
 use bevy::ecs::component::Component;
 use bevy::prelude::Visibility;
@@ -39,6 +38,7 @@ impl Into<(usize, usize)> for TiledIndex {
 #[derive(Component, Reflect, Clone, Debug)]
 pub struct TiledAnimation {
     pub animation: Vec<AnimationFrameReflect>,
+    /// In Seconds
     pub start_time: f32
 }
 

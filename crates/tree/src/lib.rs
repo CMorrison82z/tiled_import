@@ -14,6 +14,9 @@ impl<T> Tree<T> {
     pub fn iter_breadth(&self) -> BreadthFirstIterator<T> {
         BreadthFirstIterator::new(self)
     }
+    pub fn iter_depth(&self) -> DepthFirstIterator<T> {
+        DepthFirstIterator::new(self)
+    }
 }
 
 impl<T: Clone> Tree<T> {
@@ -24,6 +27,8 @@ impl<T: Clone> Tree<T> {
     }
 }
 
+// TODO:
+// Make `item` take a reference, rather than owned.
 /// Crumbs are used for traversing the structure.
 #[derive(Clone, Debug)]
 pub struct TreeCrumb<T> {
@@ -106,7 +111,7 @@ impl<'a, T> BreadthFirstIterator<'a, T> {
     pub fn new(root: &'a Tree<T>) -> Self {
         let mut queue = VecDeque::new();
         queue.push_back(root);
-        BreadthFirstIterator(queue)
+        Self(queue)
     }
 }
 
@@ -126,6 +131,40 @@ impl<'a, T> Iterator for BreadthFirstIterator<'a, T> {
                     // Enqueue all children
                     for child in children {
                         queue.push_back(child);
+                    }
+                    value
+                }
+            }
+        })
+    }
+}
+
+pub struct DepthFirstIterator<'a, T>(Vec<&'a Tree<T>>);
+
+impl<'a, T> DepthFirstIterator<'a, T> {
+    pub fn new(root: &'a Tree<T>) -> Self {
+        let mut stack = Vec::new();
+        stack.push(root);
+        Self(stack)
+    }
+}
+
+impl<'a, T> Iterator for DepthFirstIterator<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Self(stack) = self;
+
+        stack.pop().map(|current| {
+            match current {
+                Tree::Leaf(value) => {
+                    // Leaf nodes have no children to enqueue
+                    value
+                }
+                Tree::Node(value, children) => {
+                    // Stack all children
+                    for child in children.iter().rev() {
+                        stack.push(child);
                     }
                     value
                 }
@@ -225,5 +264,19 @@ mod tests {
         while let Some(zipper) = iter.next() {
             // println!("{:#?}", zipper);
         }
+    }
+
+    #[test]
+    fn depth_iter() {
+        let data = Tree::Node(1, vec![
+            Tree::Leaf(2),
+            Tree::Node(3, vec![
+                Tree::Leaf(4),
+                Tree::Leaf(5),
+            ]),
+            Tree::Leaf(6)
+        ]);
+
+        assert_eq!(vec![1,2,3,4,5,6], data.iter_depth().map(|&x| x).collect::<Vec<u8>>());
     }
 }
