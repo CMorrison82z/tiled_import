@@ -75,7 +75,8 @@ pub fn get_animation(a: &TiledMapAsset, t_gid: Gid, start_time_secs: f32) -> Opt
     Some((
         TiledAnimation {
             animation: animation.into_iter().map(|&af| af.into()).collect(),
-            start_time: start_time_secs
+            start_time: start_time_secs,
+            player: TiledAnimationPlayer::Once
         },
         Sprite {
             image: a.tilemap_textures.get(tileset_index).unwrap().clone(),
@@ -99,41 +100,50 @@ impl TiledId {
 // All functions convert to secs (from milli-secs). Wasteful computation.
 impl TiledAnimation {
     /// Is `None` if the time has elapsed beyond the duration of the final frame.
+    /// If it is `Cycled` will always be `Some`
     pub fn get_current_tile(&self, now_secs: f32) -> Option<tiled_parse::types::ID> {
-        self.animation.iter().enumerate().scan(self.start_time, |acc_t, (i, &AnimationFrameReflect {tile_id, duration})| {
-            if *acc_t <= now_secs {
-                *acc_t += duration / 1000.;
+        match self.player {
+            TiledAnimationPlayer::Once => self.animation.iter().enumerate().scan(self.start_time, |acc_t, (i, &AnimationFrameReflect {tile_id, duration})| {
+                if *acc_t <= now_secs {
+                    *acc_t += duration / 1000.;
 
-                // If it is the last frame and the time has elapsed beyond the duration of the last
-                // frame, then we've gone past the length of the animation.
-                if i == (self.animation.len() - 1) && now_secs > *acc_t {
-                    Some(None)
+                    // If it is the last frame and the time has elapsed beyond the duration of the last
+                    // frame, then we've gone past the length of the animation.
+                    if i == (self.animation.len() - 1) && now_secs > *acc_t {
+                        Some(None)
+                    } else {
+                        Some(Some(tile_id))
+                    }
                 } else {
-                    Some(Some(tile_id))
+                    None
                 }
-            } else {
-                None
-            }
-        }).last().flatten()
-    }
-    /// Cycles the animation for time that has exceeded the full length of the animation
-    pub fn get_current_tile_cycle(&self, now_secs: f32) -> tiled_parse::types::ID {
-        let remainder = now_secs % self.get_net_duration();
+            }).last().flatten(),
+            TiledAnimationPlayer::Cycled => {
+                let remainder = now_secs % self.get_net_duration();
 
-        // NOTE:
-        // Looks similar to `get_current_tile`, but has less checks and doesn't need to enumerate
-        // the iterator.
-        self.animation.iter().scan(self.start_time, |acc_t, &AnimationFrameReflect {tile_id, duration}| {
-            if *acc_t <= (self.start_time + remainder) {
-                *acc_t += duration / 1000.;
+                // NOTE:
+                // Looks similar to `get_current_tile`, but has less checks and doesn't need to enumerate
+                // the iterator.
+                self.animation.iter().scan(self.start_time, |acc_t, &AnimationFrameReflect {tile_id, duration}| {
+                    if *acc_t <= (self.start_time + remainder) {
+                        *acc_t += duration / 1000.;
 
-                Some(tile_id)
-            } else {
-                None
+                        Some(tile_id)
+                    } else {
+                        None
+                    }
+                }).last()
             }
-        }).last().unwrap()
+        }
     }
     pub fn get_net_duration(&self) -> f32 {
         self.animation.iter().map(|af| af.duration / 1000.).sum()
+    }
+    pub fn get_end_time(&self, now_secs: f32) -> f32 {
+        match self.player {
+            TiledAnimationPlayer::Once => self.start_time + self.get_net_duration(),
+            TiledAnimationPlayer::Cycled =>
+                self.start_time + ((now_secs - self.start_time) / self.get_net_duration()).ceil() * self.get_net_duration()
+        }
     }
 }

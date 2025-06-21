@@ -1,5 +1,7 @@
 use bevy::asset::{Asset, Handle};
 use bevy::ecs::component::Component;
+use bevy::ecs::entity::Entity;
+use bevy::ecs::event::Event;
 use bevy::prelude::Visibility;
 use bevy::reflect::{impl_reflect, Reflect, TypePath};
 use bevy::scene::Scene;
@@ -35,11 +37,20 @@ impl Into<(usize, usize)> for TiledIndex {
     }
 }
 
+#[derive(Reflect, Copy, Clone, Debug)]
+pub enum TiledAnimationPlayer {
+    Once,
+    Cycled
+}
+
 #[derive(Component, Reflect, Clone, Debug)]
 pub struct TiledAnimation {
+    // TODO:
+    // Animation becomes an Asset. This will become a `Handle<TiledAnimation>`
     pub animation: Vec<AnimationFrameReflect>,
     /// In Seconds
-    pub start_time: f32
+    pub start_time: f32,
+    pub player: TiledAnimationPlayer
 }
 
 // TODO:
@@ -54,6 +65,12 @@ impl From<AnimationFrame> for AnimationFrameReflect {
     fn from(AnimationFrame { tile_id, duration }: AnimationFrame) -> Self {
         Self { tile_id, duration }
     }
+}
+
+/// Triggers when a tween completes (regardless of if it cycles)
+#[derive(Event, Reflect, Copy, Clone, Debug)]
+pub struct TiledAnimationCompleted {
+    pub entity: Entity,
 }
 
 #[derive(TypePath, Asset)]

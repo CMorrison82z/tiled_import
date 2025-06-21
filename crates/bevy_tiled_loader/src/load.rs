@@ -279,6 +279,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                             },
                                             TiledAnimation {
                                                 animation: animation.into_iter().map(|&f| f.into()).collect(),
+                                                player: TiledAnimationPlayer::Cycled,
                                                 start_time: 0.
                                             }
                                         ));

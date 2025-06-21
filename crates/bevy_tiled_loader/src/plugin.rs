@@ -27,7 +27,8 @@ impl Plugin for TiledScenePlugin {
             .register_type_data::<SerializedComponents, ReflectComponent>()
             .init_asset::<TiledMapAsset>()
             .init_asset_loader::<TiledLoader>()
-            .add_systems(Update, load_buffered_map)
+            .add_event::<TiledAnimationCompleted>()
+            .add_systems(Update, (load_buffered_map, emit_animation_event))
             .add_observer(
                 |trigger: Trigger<OnAdd, SerializedComponents>,
                  query: Query<&SerializedComponents>,
@@ -99,10 +100,25 @@ fn run_animations(
     t: Res<Time>
 ) {
     q.iter_mut().for_each(|(mut s, ta)| {
-        let current_id = ta.get_current_tile_cycle(t.elapsed_secs()) as usize;
+        if let Some(current_id) = ta.get_current_tile(t.elapsed_secs()) {
+            let current_id = current_id as usize;
 
-        if s.texture_atlas.as_ref().unwrap().index != current_id {
-            s.texture_atlas.as_mut().unwrap().index = current_id;
+            if s.texture_atlas.as_ref().unwrap().index != current_id {
+                s.texture_atlas.as_mut().unwrap().index = current_id;
+            }
         }
+    })
+}
+
+fn emit_animation_event(
+    mut e: EventWriter<TiledAnimationCompleted>,
+    q: Query<(Entity, &TiledAnimation)>,
+    t: Res<Time>
+) {
+    q.iter().for_each(|(entity, ta)| {
+        let end_time = ta.get_end_time(t.elapsed_secs());
+        if t.elapsed_secs() - t.delta_secs() < end_time && t.elapsed_secs() >= end_time {
+            e.write(TiledAnimationCompleted { entity });
+        };
     })
 }
