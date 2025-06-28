@@ -50,14 +50,12 @@ fn spawn_tiled_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn reading_tiled_properties_example(
     tiled_map_assets: Res<Assets<TiledMapAsset>>,
-    query_scenes: Query<(Entity, &SceneRoot), Added<SceneRoot>>,
+    query_scenes: Query<(Entity, &TiledMapScene), Added<SceneRoot>>,
     children: Query<&Children>,
     query_tiled_id: Query<&TiledId>,
 ) {
-    query_scenes.iter().for_each(|(entity, scene_root)| {
-        let Some(tma) = get_tiled_map_with_scene(&tiled_map_assets, scene_root) else {
-            return;
-        };
+    query_scenes.iter().for_each(|(entity, TiledMapScene(tiled_map_handle))| {
+        let Some(tma) = tiled_map_assets.get(tiled_map_handle) else {return};
 
         children
             .iter_descendants(entity)
