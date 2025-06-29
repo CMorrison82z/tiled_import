@@ -146,27 +146,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
         image: e
             .iter()
             .find(|x| x.tag_has_name("image"))
-            .map(|xml_element| match xml_element {
-                Xml::Element(img_tag, _) => Image {
-                    source: img_tag.attributes.get("source").unwrap().into(),
-                    dimensions: {
-                        (
-                            (get_parse::<u32>(&img_tag.attributes, "width").unwrap()
-                                - (margin as u32))
-                                / (tile_size.0 + (spacing as u32)),
-                            (get_parse::<u32>(&img_tag.attributes, "height").unwrap()
-                                - (margin as u32))
-                                / (tile_size.1 + (spacing as u32)),
-                        )
-                    },
-                    format: img_tag
-                        .attributes
-                        .get("format")
-                        .unwrap_or(&"png".into())
-                        .clone(),
-                },
-                _ => unreachable!(), // This will panic if Xml::Element is not matched
-            })
+            .and_then(parse_image)
             .expect("Tile set should contain an image."),
         tile_stuff: e
             .iter()
@@ -311,8 +291,17 @@ fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHier
             ))),
             IMAGE_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
-                // TODO:
-                LayerType::ImageLayer(todo!()),
+                LayerType::ImageLayer(
+                    ImageStuff {
+                        repeatx: get_parse(&t.attributes, "repeatx")?,
+                        repeaty: get_parse(&t.attributes, "repeaty")?,
+                        image: c
+                            .iter()
+                            .find(|x| x.tag_has_name("image"))
+                            .and_then(parse_image)
+                            .expect("Tile set should contain an image.")
+                    }
+                ),
                 parse_tmx_properties(x).unwrap_or_default(),
             ))),
             _ => None,
@@ -470,6 +459,25 @@ fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLaye
         // repeatx: get_parse(&t.attributes, "repeatx").unwrap_or(false),
         // repeaty: get_parse(&t.attributes, "repeaty").unwrap_or(false),
         properties,
+    }
+}
+
+fn parse_image(x: &Xml) -> Option<Image> {
+    match x {
+        Xml::Element(Tag { value, attributes }, _) => if value.as_str() == "image" {
+            Some(
+                Image {
+                    source: attributes.get("source")?.into(),
+                    dimensions: {
+                        (
+                            get_parse::<u32>(&attributes, "width")?,
+                            get_parse::<u32>(&attributes, "height")?
+                        )
+                    },
+                }
+            )
+        } else { None },
+        _ => None, // This will panic if Xml::Element is not matched
     }
 }
 

@@ -9,7 +9,7 @@ use bevy::transform::components::Transform;
 
 #[cfg(feature = "rapier2d_colliders")]
 use bevy_rapier2d::prelude::*;
-use tiled_parse::relations::{get_tile_id, get_tileset_for_gid};
+use tiled_parse::relations::{get_tile_id, get_tileset_for_gid, tile_set_rows_and_columns};
 
 use crate::types::*;
 use tiled_parse::parse::*;
@@ -110,15 +110,12 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             name,
             spacing,
             margin,
-            image,
+            image: tiled_parse::types::Image {
+                source,
+                ..
+            },
             tile_stuff,
         } = ts;
-
-        let tiled_parse::types::Image {
-            source,
-            format,
-            dimensions: (columns, rows),
-        } = image;
 
         let tmx_dir = load_context
             .path()
@@ -127,6 +124,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
         let tile_path = tmx_dir.join(&source);
         let asset_path = AssetPath::from(tile_path);
 
+        // TODO:
+        // I think needs to use another loading method to register it as a dependency
         let texture_handle: Handle<bevy::prelude::Image> = load_context.load(asset_path.clone());
 
         let file_name = source
@@ -134,6 +133,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .expect("Should have file name")
             .to_str()
             .expect("Valid utf8");
+
+        let (columns, rows) = tile_set_rows_and_columns(ts);
 
         // TODO:
         // I don't know if I should use "add_labeled_asset", and if the arguments are
@@ -143,8 +144,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                 file_name.into(),
                 TextureAtlasLayout::from_grid(
                     UVec2::new(tile_size.0, tile_size.1),
-                    *columns,
-                    *rows,
+                    columns,
+                    rows,
                     // TODO:
                     // I'm not sure this translates correctly
                     Some(*spacing as u32 * UVec2::ONE),
@@ -158,7 +159,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
     // Load scene
     let scene = {
-        let scene_load_context = load_context.begin_labeled_asset();
+        let mut scene_load_context = load_context.begin_labeled_asset();
         let mut world = World::default();
 
         let world_root_id = world
@@ -288,7 +289,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             },
                         );
                 }
-                LayerType::Group => println!("Group layer {name}"),
                 LayerType::ObjectLayer(os) => {
                     let layer_entity = world.spawn((
                         Name::new(name.clone()),
@@ -381,6 +381,36 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         }
                     });
                 }
+                LayerType::ImageLayer(ImageStuff {
+                    repeatx,
+                    repeaty,
+                    image: tiled_parse::types::Image {
+                        source,
+                        ..
+                    }
+                }) => {
+                    let tmx_dir = load_context
+                        .path()
+                        .parent()
+                        .expect("The asset load context was empty.");
+                    let tile_path = tmx_dir.join(&source);
+
+                    layer_ents.push(world.spawn((
+                        Name::new(name.clone()),
+                        Transform::IDENTITY,
+                        TiledId::Layer(*id),
+                        Sprite {
+                            image: scene_load_context.load(AssetPath::from(tile_path)),
+                            image_mode: SpriteImageMode::Tiled {
+                                tile_x: *repeatx,
+                                tile_y: *repeaty,
+                                stretch_value: 1.
+                            },
+                            ..default()
+                        }
+                    )).id());
+                }
+                LayerType::Group => println!("Group layer {name}"),
                 _ => {
                     eprintln!("Layer `{name} : {content:#?}` is not currently handled.");
                 }

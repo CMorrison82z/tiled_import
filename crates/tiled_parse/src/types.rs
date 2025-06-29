@@ -167,7 +167,6 @@ pub struct ImageStuff {
 pub struct Image {
     pub source: PathBuf,
     pub dimensions: PairU32,
-    pub format: String,
     // pub color: Color
 }
 
