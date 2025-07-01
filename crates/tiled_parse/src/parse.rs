@@ -215,14 +215,14 @@ fn parse_tmx_property(x: &Xml) -> (String, TiledPropertyType) {
 
     (
         t.attributes.get("name").unwrap().clone(),
-        match t.attributes.get("type").unwrap().as_str() {
+        match t.attributes.get("type").map(|s| s.as_str()).unwrap_or("string") {
             "string" => TiledPropertyType::String(v),
             "int" => TiledPropertyType::Int(v.parse().unwrap()),
             "float" => TiledPropertyType::Float(v.parse().unwrap()),
             "bool" => TiledPropertyType::Bool(v.parse().unwrap()),
             "file" => TiledPropertyType::File(v.parse().unwrap()),
             "object" => TiledPropertyType::Object(v.parse().unwrap()),
-            _ => unreachable!(),
+            _ => panic!("Unsupported attribute type `{:?}`", t.attributes.get("type")),
         },
     )
 }
