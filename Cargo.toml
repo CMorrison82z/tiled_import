@@ -16,6 +16,7 @@ tiled_parse_tree = { path = "crates/tree", version = "0.1.0" }
 bevy_tiled_loader = { path = "crates/bevy_tiled_loader", version = "0.1.0" }
 
 try_match = "0.4.2"
+criterion = "0.6"
 futures = "*"
 itertools = "^0.14.0"
 ndarray = "0.15.6"

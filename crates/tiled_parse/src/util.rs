@@ -12,14 +12,6 @@ use nom::{
 
 use crate::types::*;
 
-fn whitespace<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    take_while(move |c| " \t\r\n".contains(c))(i)
-}
-
-fn whitespace1<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    take_while1(move |c| " \t\r\n".contains(c))(i)
-}
-
 fn u32_parse<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, u32, E> {
     // TODO:
     // Don't unwrap
@@ -36,8 +28,8 @@ pub(crate) fn csv_root<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<u32>, E> {
     cut(separated_list1(
-        preceded(whitespace, char(',')),
-        preceded(whitespace, u32_parse),
+        preceded(multispace0, char(',')),
+        preceded(multispace0, u32_parse),
     ))(i)
 }
 
@@ -45,7 +37,7 @@ pub(crate) fn spaced_f32_pairs<'a, E: ParseError<&'a str> + ContextError<&'a str
     i: &'a str,
 ) -> IResult<&'a str, Vec<PairF32>, E> {
     cut(separated_list0(
-        whitespace1,
+        multispace1,
         separated_pair(f32_parse, char(','), f32_parse),
     ))(i)
 }

@@ -323,6 +323,8 @@ fn grid_parse(map_columns: u32, x: &Xml) -> Array2<Option<LayerTile>> {
         panic!("Compression is not supported. I recommend compressing the entire `tmx` if you need compression, not just the data.")
     }
 
+    // TODO:
+    // Construct Array2 directly, rather than an intermediate `Vec`
     let gids = match attributes
         .get("encoding")
         .map(|x| x.as_str())
