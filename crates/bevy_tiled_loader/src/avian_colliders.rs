@@ -1,3 +1,4 @@
+use bevy::ecs::spawn::{SpawnRelatedBundle, SpawnableList, SpawnIter};
 use bevy::math::Vec2;
 use bevy::prelude::*;
 use bevy::transform::components::Transform;
@@ -5,6 +6,7 @@ use bevy::transform::components::Transform;
 use avian2d::prelude::*;
 use bevy_platform::collections::HashMap;
 use bincode::ErrorKind;
+use try_match::match_ok;
 
 use crate::types::{SceneSerializedComponents, SerializedComponents};
 use tiled_parse::types::*;
@@ -16,8 +18,7 @@ pub(crate) fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>>
 }
 
 // TODO: Use `as` pattern on Object
-pub(crate) fn insert_collider(
-    e: &mut EntityWorldMut,
+pub fn object_collider(
     Object {
         position: (x, y),
         size,
@@ -25,15 +26,13 @@ pub(crate) fn insert_collider(
         otype,
         ..
     }: &Object,
-) {
-    let ObjectType::Geometry(gt) = otype else {
-        return;
-    };
+) -> Option<impl Bundle> {
+    let gt = match_ok!(otype, ObjectType::Geometry(gt))?;
 
     // TODO:
     // Maybe point colliders are useful ?
-    if let GeometryType::Point = gt {
-        return;
+    if matches!(gt, GeometryType::Point) {
+        return None;
     }
 
     let (
@@ -44,7 +43,7 @@ pub(crate) fn insert_collider(
         collider,
     ) = construct_geometry(&gt, size.map(|(x, y)| Vec2 { x, y }), None);
 
-    e.insert((
+    Some((
         Transform::from_xyz(*x + offset_x, -(*y + offset_y), 0.)
             .with_rotation(Quat::from_axis_angle(Vec3::Z, rotation.to_radians())),
         SerializedComponents(HashMap::from([
@@ -59,21 +58,22 @@ pub(crate) fn insert_collider(
                 bincode::serialize(&RigidBody::Static).unwrap(),
             ),
         ])),
-    ));
+    ))
 }
 
-pub(crate) fn add_child_colliders(e: &mut EntityWorldMut, os: &Vec<Object>) {
-    e.with_children(|cb| {
+pub fn object_colliders(os: &Vec<Object>) -> SpawnRelatedBundle<ChildOf, impl SpawnableList<ChildOf>> {
+    Children::spawn(SpawnIter(
         os.iter()
-            .filter(|o| {
-                if let Some(TiledPropertyType::Bool(v)) = o.properties.get("collider") {
-                    *v
+            .filter_map(|o|
+                if let Some(TiledPropertyType::Bool(true)) = o.properties.get("collider") {
+                    object_collider(o)
                 } else {
-                    false
+                    None
                 }
-            })
-            .for_each(|o| insert_collider(&mut cb.spawn_empty(), o))
-    });
+            )
+            .collect::<Vec<_>>()
+            .into_iter()
+    ))
 }
 
 fn construct_geometry(

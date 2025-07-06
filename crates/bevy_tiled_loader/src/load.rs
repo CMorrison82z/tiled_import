@@ -249,15 +249,13 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 // FIXME: Dynamic RigidBody's move independently from the Sprite.
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
                                     #[cfg(feature = "rapier2d_colliders")]
-                                    crate::rapier_colliders::add_child_colliders(
-                                        &mut tile_entity,
-                                        &tile_aux_info.objects,
+                                    tile_entity.insert(
+                                        crate::rapier_colliders::object_colliders(&tile_aux_info.objects)
                                     );
 
                                     #[cfg(feature = "avian2d_colliders")]
-                                    crate::avian_colliders::add_child_colliders(
-                                        &mut tile_entity,
-                                        &tile_aux_info.objects,
+                                    tile_entity.insert(
+                                        crate::avian_colliders::object_colliders(&tile_aux_info.objects)
                                     );
 
                                     if let Some(animation) = &tile_aux_info.animation {
@@ -359,25 +357,27 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             // FIXME: Dynamic RigidBody's move independently from the Sprite.
                             if let Some(tile_aux_info) = tile_aux_info_opt {
                                 #[cfg(feature = "rapier2d_colliders")]
-                                crate::rapier_colliders::add_child_colliders(
-                                    &mut tile_entity,
-                                    &tile_aux_info.objects,
+                                tile_entity.insert(
+                                    crate::rapier_colliders::object_colliders(&tile_aux_info.objects)
                                 );
 
                                 #[cfg(feature = "avian2d_colliders")]
-                                crate::avian_colliders::add_child_colliders(
-                                    &mut tile_entity,
-                                    &tile_aux_info.objects,
+                                tile_entity.insert(
+                                    crate::avian_colliders::object_colliders(&tile_aux_info.objects)
                                 );
                             }
                         } else {
                             let mut obj_ent = world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));
 
                             #[cfg(feature = "rapier2d_colliders")]
-                            crate::rapier_colliders::insert_collider(&mut obj_ent, o);
+                            if let Some(collider_bundle) = crate::rapier_colliders::object_collider(o) {
+                                obj_ent.insert(collider_bundle);
+                            }
 
                             #[cfg(feature = "avian2d_colliders")]
-                            crate::avian_colliders::insert_collider(&mut obj_ent, o);
+                            if let Some(collider_bundle) = crate::avian_colliders::object_collider(o) {
+                                obj_ent.insert(collider_bundle);
+                            }
                         }
                     });
                 }

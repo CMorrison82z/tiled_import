@@ -60,6 +60,7 @@ pub enum TiledPropertyType {
 /// Geometries for Tiled Objects.
 #[derive(Debug, Clone)]
 pub enum ObjectType {
+    /// Tiles in an Object layer will be an `ObjectType::Tile`
     Tile(Gid),
     Geometry(GeometryType),
     // TODO: Text
