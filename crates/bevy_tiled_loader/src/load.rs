@@ -1,3 +1,7 @@
+//! NOTE:
+//! Tiles with objects (for example a collider) is different from an object `ObjectType::Tile`.
+//! - Tiles are in a TileLayer. The associated objects are children of the Tile Entity
+//! - `ObjectType::Tile`s are just a single Entity, containing a Sprite for the tile.
 use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt};
 use bevy::asset::{Handle, LoadContext};
 use bevy::image::{TextureAtlas, TextureAtlasLayout};

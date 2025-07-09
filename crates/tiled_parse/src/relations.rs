@@ -1,4 +1,6 @@
 
+use try_match::match_ok;
+
 use crate::types::*;
 
 pub fn get_tileset_for_gid(tilesets: &[TileSet], Gid(gid): Gid) -> Option<&TileSet> {
@@ -38,6 +40,20 @@ impl TiledMap {
                 .get(&get_tile_id(ts, gid))
                 .map(|tai| &tai.properties)
         })
+    }
+
+    /// For getting the inherited properties of an `ObjectType::Tile` from the Tile it points to.
+    /// If the object is NOT an `ObjectType::Tile`, simply iterates its own properties.
+    pub fn iter_object_tile_properties<'a>(&'a self, object: &'a Object) -> impl Iterator<Item = (&'a String, &'a TiledPropertyType)> {
+        object
+            .properties
+            .iter()
+            .chain({
+                match_ok!(object.otype, ObjectType::Tile(t_gid))
+                    .and_then(|t_gid| self.get_tile_properties(t_gid))
+                    .into_iter()
+                    .flat_map(|hm| hm.iter())
+            })
     }
 
     pub fn get_tile_objects(&self, gid: Gid) -> Option<&Vec<Object>> {
