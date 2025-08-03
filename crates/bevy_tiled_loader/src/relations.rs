@@ -3,6 +3,7 @@ use tiled_parse::{relations::{get_tile_id, get_tileset_for_gid}, types::{Animati
 use try_match::match_ok;
 
 use crate::types::*;
+use tiled_parse::types::*;
 
 /// Given a `TiledMapAsset`, returns `Entity`'s with a SceneRoot containing `TiledMapAsset.scene`.
 pub fn get_entities_with_tiled_map(
@@ -12,6 +13,10 @@ pub fn get_entities_with_tiled_map(
     q.iter()
         .filter_map(|(e, SceneRoot(h))| if a.scene == *h { Some(e) } else { None })
         .collect()
+}
+
+pub fn is_collider(o: &Object) -> bool {
+    matches!(o.properties.get("collider"), Some(TiledPropertyType::Bool(true)))
 }
 
 /// Given a `TiledLayer` from a `TiledMapAsset`.

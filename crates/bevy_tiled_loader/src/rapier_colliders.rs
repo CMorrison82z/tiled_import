@@ -52,21 +52,6 @@ pub fn object_collider(
     ))
 }
 
-pub fn object_colliders(os: &Vec<Object>) -> SpawnRelatedBundle<ChildOf, impl SpawnableList<ChildOf>> {
-    Children::spawn(SpawnIter(
-        os.iter()
-            .filter_map(|o|
-                if let Some(TiledPropertyType::Bool(true)) = o.properties.get("collider") {
-                    object_collider(o)
-                } else {
-                    None
-                }
-            )
-            .collect::<Vec<_>>()
-            .into_iter()
-    ))
-}
-
 fn construct_geometry(
     shape: &GeometryType,
     size: Option<Vec2>,

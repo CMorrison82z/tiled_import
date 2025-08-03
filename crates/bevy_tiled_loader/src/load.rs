@@ -16,6 +16,7 @@ use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid, tile_set_rows_and_columns};
 
 use crate::types::*;
+use crate::relations::is_collider;
 use tiled_parse::parse::*;
 use tiled_parse::types::*;
 
@@ -250,17 +251,27 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     ChildOf(layer_ent),
                                 ));
 
-                                // FIXME: Dynamic RigidBody's move independently from the Sprite.
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
-                                    #[cfg(feature = "rapier2d_colliders")]
-                                    tile_entity.insert(
-                                        crate::rapier_colliders::object_colliders(&tile_aux_info.objects)
-                                    );
+                                    tile_entity.with_children(|child_spawner| {
+                                        tile_aux_info.objects.iter().for_each(|o| {
+                                            let mut c_e = child_spawner.spawn(TileObject(o.id));
 
-                                    #[cfg(feature = "avian2d_colliders")]
-                                    tile_entity.insert(
-                                        crate::avian_colliders::object_colliders(&tile_aux_info.objects)
-                                    );
+                                            // FIXME: 
+                                            // Dynamic RigidBody's move independently from the Sprite.
+                                            // Maybe put `RigidBody` (NOT the `Collider` !) in `tile_entity` ?
+                                            if is_collider(o) {
+                                                #[cfg(feature = "rapier2d_colliders")]
+                                                if let Some(obj_bundle) = crate::rapier_colliders::object_collider(o) {
+                                                    c_e.insert(obj_bundle);
+                                                }
+
+                                                #[cfg(feature = "avian2d_colliders")]
+                                                if let Some(obj_bundle) = crate::avian_colliders::object_collider(o) {
+                                                    c_e.insert(obj_bundle);
+                                                }
+                                            }
+                                        });
+                                    });
 
                                     if let Some(animation) = &tile_aux_info.animation {
                                         let AnimationFrame { tile_id, .. } = animation[0];
@@ -302,7 +313,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
                     layer_ents.push(layer_entity_id);
 
-                    // FIXME: Dynamic RigidBody's move independently from the Sprite.
                     os.iter().for_each(|o| {
                         let Object {
                             id,
@@ -358,17 +368,27 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 ChildOf(layer_entity_id),
                             ));
 
-                            // FIXME: Dynamic RigidBody's move independently from the Sprite.
                             if let Some(tile_aux_info) = tile_aux_info_opt {
-                                #[cfg(feature = "rapier2d_colliders")]
-                                tile_entity.insert(
-                                    crate::rapier_colliders::object_colliders(&tile_aux_info.objects)
-                                );
+                                tile_entity.with_children(|child_spawner| {
+                                    tile_aux_info.objects.iter().for_each(|o| {
+                                        let mut c_e = child_spawner.spawn(TileObject(o.id));
 
-                                #[cfg(feature = "avian2d_colliders")]
-                                tile_entity.insert(
-                                    crate::avian_colliders::object_colliders(&tile_aux_info.objects)
-                                );
+                                        // FIXME:
+                                        // Dynamic RigidBody's move independently from the Sprite.
+                                        // Maybe put `RigidBody` (NOT the `Collider` !) in `tile_entity` ?
+                                        if is_collider(o) {
+                                            #[cfg(feature = "rapier2d_colliders")]
+                                            if let Some(obj_bundle) = crate::rapier_colliders::object_collider(o) {
+                                                c_e.insert(obj_bundle);
+                                            }
+
+                                            #[cfg(feature = "avian2d_colliders")]
+                                            if let Some(obj_bundle) = crate::avian_colliders::object_collider(o) {
+                                                c_e.insert(obj_bundle);
+                                            }
+                                        }
+                                    });
+                                });
                             }
                         } else {
                             let mut obj_ent = world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));

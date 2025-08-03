@@ -29,6 +29,9 @@ pub enum TiledId {
 }
 
 #[derive(Component, Reflect, Copy, Clone, Debug)]
+pub struct TileObject(pub tiled_parse::types::ID);
+
+#[derive(Component, Reflect, Copy, Clone, Debug)]
 pub struct TiledIndex(pub usize, pub usize);
 
 impl Into<(usize, usize)> for TiledIndex {
