@@ -72,9 +72,7 @@ impl From<AnimationFrame> for AnimationFrameReflect {
 
 /// Triggers when a tween completes (regardless of if it cycles)
 #[derive(Event, Reflect, Copy, Clone, Debug)]
-pub struct TiledAnimationCompleted {
-    pub entity: Entity,
-}
+pub struct TiledAnimationCompleted;
 
 #[derive(TypePath, Asset)]
 pub struct TiledMapAsset {

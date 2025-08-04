@@ -113,14 +113,17 @@ fn run_animations(
 }
 
 fn emit_animation_event(
-    mut e: EventWriter<TiledAnimationCompleted>,
+    mut c: Commands,
     q: Query<(Entity, &TiledAnimation)>,
     t: Res<Time>
 ) {
-    q.iter().for_each(|(entity, ta)| {
-        let end_time = ta.get_end_time(t.elapsed_secs());
-        if t.elapsed_secs() - t.delta_secs() < end_time && t.elapsed_secs() >= end_time {
-            e.write(TiledAnimationCompleted { entity });
-        };
-    })
+    c.trigger_targets(
+        TiledAnimationCompleted,
+        q.iter().filter_map(|(entity, ta)| {
+            let end_time = ta.get_end_time(t.elapsed_secs());
+            if t.elapsed_secs() - t.delta_secs() < end_time && t.elapsed_secs() >= end_time {
+                Some(entity)
+            } else {None}
+        }).collect::<Vec<Entity>>()
+    );
 }
