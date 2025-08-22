@@ -1,6 +1,6 @@
 [package]
 name = "tiled_parse_tree"
-version = "0.1.0"
+version = "0.1.1"
 description = "An implementation of a Tree data structure."
 authors.workspace = true
 edition.workspace = true

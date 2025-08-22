@@ -1,6 +1,6 @@
 [package]
 name = "tiled_parse"
-version = "0.1.0"
+version = "0.1.1"
 description = "Tiled tmx parser with nom."
 authors.workspace = true
 edition.workspace = true
