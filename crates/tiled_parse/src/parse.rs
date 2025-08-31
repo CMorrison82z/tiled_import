@@ -9,7 +9,7 @@ use itertools::{Either, Itertools};
 use ndarray::Array2;
 use nom::error::ErrorKind;
 use try_match::match_ok;
-use xml_nom_parse::types::{Tag, Xml};
+use xml_nom_parse::types::{TagRef, XmlRef};
 
 use crate::{
     types::*,
@@ -25,8 +25,8 @@ pub async fn parse<'a, 'b, F>(i: &'a str, file_loader: &mut F) -> Result<TiledMa
 where
     F: FnMut(&String) -> BoxFuture<'b, Option<String>>,
 {
-    let tmx_root = Xml::from_input_str(i).unwrap();
-    let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
+    let tmx_root = XmlRef::from_input_str(i).unwrap();
+    let XmlRef::Element(map_tag, Some(elements)) = &tmx_root else {
         return Err(TiledParseError::TiledNoRootError);
     };
 
@@ -46,7 +46,8 @@ where
         .into_iter()
         .zip(tileset_contexts.into_iter())
         .map(|(r, (first_gid, source))| {
-            let tile_set_xml = Xml::from_input_str(&r.ok_or(TiledParseError::ExternalTileSetNotFound(source.into()))?)
+            let file_cont = r.ok_or(TiledParseError::ExternalTileSetNotFound(source.into()))?;
+            let tile_set_xml = XmlRef::from_input_str(&file_cont)
                 .map_err(|_| TiledParseError::XmlParseError)?;
             parse_tile_set(first_gid, &tile_set_xml).ok_or(TiledParseError::TiledError)
         })
@@ -72,8 +73,8 @@ where
 
 /// Specifically parses tiled maps with its tilesets and such embedded in the file itself.
 pub fn parse_embedded<'a>(i: &'a str) -> Result<TiledMap, TiledParseError> {
-    let tmx_root = Xml::from_input_str(i).unwrap();
-    let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
+    let tmx_root = XmlRef::from_input_str(i).unwrap();
+    let XmlRef::Element(map_tag, Some(elements)) = &tmx_root else {
         return Err(TiledParseError::TiledNoRootError)
     };
 
@@ -98,15 +99,15 @@ pub fn parse_embedded<'a>(i: &'a str) -> Result<TiledMap, TiledParseError> {
     })
 }
 
-fn get_tile_sets(elements: &Vec<Xml>) -> Vec<TiledMapTileSet> {
+fn get_tile_sets(elements: &Vec<XmlRef>) -> Vec<TiledMapTileSet> {
     elements
         .iter()
         .filter_map(|x| tile_set_element(&x))
         .collect()
 }
 
-fn tile_set_element(x: &Xml) -> Option<TiledMapTileSet> {
-    let Xml::Element(t, _) = x else {
+fn tile_set_element(x: &XmlRef) -> Option<TiledMapTileSet> {
+    let XmlRef::Element(t, _) = x else {
         return None;
     };
 
@@ -126,8 +127,8 @@ fn tile_set_element(x: &Xml) -> Option<TiledMapTileSet> {
     }
 }
 
-fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
-    let Xml::Element(t, Some(e)) = x else {
+fn parse_tile_set(first_gid: ID, x: &XmlRef) -> Option<TileSet> {
+    let XmlRef::Element(t, Some(e)) = x else {
         return None;
     };
 
@@ -142,7 +143,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
     Some(TileSet {
         tile_size,
         first_gid,
-        name: t.attributes.get("name").unwrap().clone(),
+        name: get_parse(&t.attributes, "name").unwrap(),
         margin,
         spacing,
         image: e
@@ -156,7 +157,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
                 if !x.tag_has_name("tile") {
                     return None;
                 };
-                let Xml::Element(tile_tag, Some(tile_elems)) = x else {
+                let XmlRef::Element(tile_tag, Some(tile_elems)) = x else {
                     return None;
                 };
                 let id = get_parse::<u32>(&tile_tag.attributes, "id")?;
@@ -172,7 +173,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
                         // NOTE:
                         // It's necessary to wrap in a new Option like this because then `objects`
                         // is a reference.
-                        Xml::Element(_, Some(objects)) => Some(objects),
+                        XmlRef::Element(_, Some(objects)) => Some(objects),
                         _ => None,
                     })
                     .unwrap_or(&vec![])
@@ -193,35 +194,35 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
     })
 }
 
-fn parse_tmx_properties(x: &Xml) -> Option<Properties> {
-    let Xml::Element(_, Some(v)) = x else {
+fn parse_tmx_properties(x: &XmlRef) -> Option<Properties> {
+    let XmlRef::Element(_, Some(v)) = x else {
         return None;
     };
 
     v.iter()
         .find(|n_x| n_x.tag_has_name("properties"))
         .map(|xml_element| match xml_element {
-            Xml::Element(_, Some(props)) => {
+            XmlRef::Element(_, Some(props)) => {
                 props.iter().map(parse_tmx_property).collect::<Properties>()
             }
-            _ => unreachable!(), // This will panic if Xml::Element is not matched
+            _ => unreachable!(), // This will panic if XmlRef::Element is not matched
         })
 }
 
-fn parse_tmx_property(x: &Xml) -> (String, TiledPropertyType) {
-    let Xml::Element(t, _) = x else { panic!() };
+fn parse_tmx_property(x: &XmlRef) -> (String, TiledPropertyType) {
+    let XmlRef::Element(t, _) = x else { panic!() };
 
-    let v = t.attributes.get("value").unwrap().clone();
+    let &v = t.attributes.get("value").unwrap();
 
     (
-        t.attributes.get("name").unwrap().clone(),
+        get_parse(&t.attributes, "name").unwrap(),
         match t
             .attributes
             .get("type")
-            .map(|s| s.as_str())
+            .map(|s| *s)
             .unwrap_or("string")
         {
-            "string" => TiledPropertyType::String(v),
+            "string" => TiledPropertyType::String(v.into()),
             "int" => TiledPropertyType::Int(v.parse().unwrap()),
             "float" => TiledPropertyType::Float(v.parse().unwrap()),
             "bool" => TiledPropertyType::Bool(v.parse().unwrap()),
@@ -235,7 +236,7 @@ fn parse_tmx_property(x: &Xml) -> (String, TiledPropertyType) {
     )
 }
 
-fn get_parse<T>(hm: &HashMap<String, String>, field: &str) -> Option<T>
+fn get_parse<T>(hm: &HashMap<&str, &str>, field: &str) -> Option<T>
 where
     T: FromStr,
     <T as FromStr>::Err: Debug,
@@ -247,9 +248,9 @@ where
 // - Recursive function could theoriticaly blow the stack. (Rust does not implement tail-call
 // elimination)
 // - Threading `map_columns` thru the construction is not ideal. (Use in `grid_parse`)
-fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHierarchy> {
+fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &XmlRef) -> Option<LayerHierarchy> {
     match x {
-        Xml::Element(t, Some(c)) => match t.value.as_str() {
+        XmlRef::Element(t, Some(c)) => match t.value {
             // This is the base layer (top of the layer hierarchy)
             BASE_LAYER => Some(LayerHierarchy::Node(
                 TiledLayer {
@@ -287,7 +288,7 @@ fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHier
                     map_columns,
                     c.iter()
                         .find(|x| {
-                            if let Xml::Element(t, _) = x {
+                            if let XmlRef::Element(t, _) = x {
                                 t.value == "data"
                             } else {
                                 false
@@ -316,12 +317,12 @@ fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHier
     }
 }
 
-fn grid_parse(map_columns: u32, x: &Xml) -> Array2<Option<LayerTile>> {
-    let Xml::Element(Tag { attributes, .. }, Some(c)) = x else {
+fn grid_parse(map_columns: u32, x: &XmlRef) -> Array2<Option<LayerTile>> {
+    let XmlRef::Element(TagRef { attributes, .. }, Some(c)) = x else {
         panic!()
     };
 
-    let Some(Xml::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {
+    let Some(XmlRef::Text(s)) = c.iter().find(|n_x| !n_x.is_element()) else {
         panic!("Only csv is supported")
     };
 
@@ -333,7 +334,7 @@ fn grid_parse(map_columns: u32, x: &Xml) -> Array2<Option<LayerTile>> {
     // Construct Array2 directly, rather than an intermediate `Vec`
     let gids = match attributes
         .get("encoding")
-        .map(|x| x.as_str())
+        .map(|x| *x)
         .expect("Map data should specify `encoding`")
     {
         "base64" => BASE64_STANDARD
@@ -358,8 +359,8 @@ fn grid_parse(map_columns: u32, x: &Xml) -> Array2<Option<LayerTile>> {
 
 // NOTE:
 // Maybe use later to support xml elements, but probably not...
-// fn parse_tile(tilesets: &Vec<TileSet>, x: &Xml) -> Option<LayerTile> {
-//     let Xml::Element(t, _) = x else { return None };
+// fn parse_tile(tilesets: &Vec<TileSet>, x: &XmlRef) -> Option<LayerTile> {
+//     let XmlRef::Element(t, _) = x else { return None };
 //
 //     let bits: u32 = t.attributes.get("gid").unwrap().parse().unwrap();
 //
@@ -386,8 +387,8 @@ fn parse_tile_from_gid(bits: &u32) -> Option<LayerTile> {
     }
 }
 
-fn object_parse(x: &Xml) -> Option<Object> {
-    let Xml::Element(t, c) = x else { return None };
+fn object_parse(x: &XmlRef) -> Option<Object> {
+    let XmlRef::Element(t, c) = x else { return None };
 
     if t.value != "object" {
         return None;
@@ -415,8 +416,8 @@ fn object_parse(x: &Xml) -> Option<Object> {
                     Some(v) => v
                         .iter()
                         .find_map(|xml_c| {
-                            if let Xml::Element(Tag { value, attributes }, _) = xml_c {
-                                match value.as_str() {
+                            if let XmlRef::Element(TagRef { value, attributes }, _) = xml_c {
+                                match *value {
                                     "ellipse" => Some(ObjectType::Geometry(GeometryType::Ellipse)),
                                     "point" => Some(ObjectType::Geometry(GeometryType::Point)),
                                     "polygon" => Some(ObjectType::Geometry(GeometryType::Polygon(
@@ -452,10 +453,10 @@ fn object_parse(x: &Xml) -> Option<Object> {
     })
 }
 
-fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLayer {
+fn parse_layer(t: &TagRef, content: LayerType, properties: Properties) -> TiledLayer {
     TiledLayer {
         id: get_parse(&t.attributes, "id").unwrap(),
-        name: t.attributes.get("name").unwrap().clone(),
+        name: get_parse(&t.attributes, "name").unwrap(),
         visible: (get_parse::<u8>(&t.attributes, "visible").unwrap_or(1) == 1),
         opacity: get_parse(&t.attributes, "opacity").unwrap_or(1.),
         parallax: (
@@ -470,10 +471,10 @@ fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLaye
     }
 }
 
-fn parse_image(x: &Xml) -> Option<Image> {
+fn parse_image(x: &XmlRef) -> Option<Image> {
     match x {
-        Xml::Element(Tag { value, attributes }, _) => {
-            if value.as_str() == "image" {
+        XmlRef::Element(TagRef { value, attributes }, _) => {
+            if *value == "image" {
                 Some(Image {
                     source: attributes.get("source")?.into(),
                     dimensions: {
@@ -487,19 +488,19 @@ fn parse_image(x: &Xml) -> Option<Image> {
                 None
             }
         }
-        _ => None, // This will panic if Xml::Element is not matched
+        _ => None, // This will panic if XmlRef::Element is not matched
     }
 }
 
-fn parse_animation(x: &Xml) -> Animation {
-    let Xml::Element(_, Some(v)) = x else {
+fn parse_animation(x: &XmlRef) -> Animation {
+    let XmlRef::Element(_, Some(v)) = x else {
         return vec![];
     };
 
     v.iter()
         .filter(|n_x| n_x.tag_has_name("frame"))
         .map(|xml_element| match xml_element {
-            Xml::Element(tag, _) => AnimationFrame {
+            XmlRef::Element(tag, _) => AnimationFrame {
                 tile_id: get_parse(&tag.attributes, "tileid").unwrap(),
                 duration: get_parse(&tag.attributes, "duration").unwrap(),
             },
