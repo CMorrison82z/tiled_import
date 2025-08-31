@@ -1,6 +1,6 @@
 [package]
 name = "tiled_parse"
-version = "0.2.1"
+version = "0.2.2"
 description = "Tiled tmx parser with nom."
 authors.workspace = true
 edition.workspace = true
@@ -21,8 +21,7 @@ tiled_parse_tree.workspace = true
 criterion.workspace = true
 nom = "7.1.3"
 base64 = "^0.22.1"
-xml_nom_parse = { git = "file:/home/chris/Documents/Create/Software/Language/Rust/Repository/Mine/nom_xml", branch = "laptop/dev"}
-# xml_nom_parse = "0.1.0"
+xml_nom_parse = "0.3"
 
 [[bench]]
 name = "big_tmx_bench"
