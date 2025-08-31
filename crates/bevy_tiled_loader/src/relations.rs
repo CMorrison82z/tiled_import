@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use tiled_parse::{relations::{get_tile_id, get_tileset_for_gid}, types::{AnimationFrame, Gid, TiledLayer}};
+use tiled_parse::{relations::{get_tile_id, get_tileset_for_gid}, types::{Gid, TiledLayer}};
 use try_match::match_ok;
 
 use crate::types::*;

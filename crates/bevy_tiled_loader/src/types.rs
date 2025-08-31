@@ -1,9 +1,8 @@
 use bevy::asset::{Asset, Handle};
 use bevy::ecs::component::Component;
-use bevy::ecs::entity::Entity;
 use bevy::ecs::event::Event;
 use bevy::prelude::Visibility;
-use bevy::reflect::{impl_reflect, Reflect, TypePath};
+use bevy::reflect::{Reflect, TypePath};
 use bevy::scene::Scene;
 use bevy::image::TextureAtlasLayout;
 use bevy::transform::components::Transform;
