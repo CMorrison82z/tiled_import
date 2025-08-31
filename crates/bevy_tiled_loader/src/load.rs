@@ -2,6 +2,7 @@
 //! Tiles with objects (for example a collider) is different from an object `ObjectType::Tile`.
 //! - Tiles are in a TileLayer. The associated objects are children of the Tile Entity
 //! - `ObjectType::Tile`s are just a single Entity, containing a Sprite for the tile.
+#[allow(unused)]
 use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt};
 use bevy::asset::{Handle, LoadContext};
 use bevy::image::{TextureAtlas, TextureAtlasLayout};
@@ -71,11 +72,11 @@ impl AssetLoader for TiledLoader {
                     .read_asset_bytes(p2)
                     .await
                     .map(|v| String::from_utf8(v).unwrap())
-                    .map_err(drop)
+                    .ok()
             })
         })
         .await
-        .map_err(|e| {
+        .map_err(|_| {
             std::io::Error::new(std::io::ErrorKind::Other, format!("Could not load TMX map"))
         })?;
 
@@ -97,9 +98,9 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
     // Might need some way to get tilemap_texture from a Tile's GID (To get the tile's texture).
     let TiledMap {
         layers,
-        grid_size,
         tile_size,
         tile_sets,
+        ..
     } = &tm;
 
     // TODO:
@@ -111,15 +112,13 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
     tile_sets.iter().for_each(|ts| {
         let TileSet {
             tile_size,
-            first_gid,
-            name,
             spacing,
             margin,
             image: tiled_parse::types::Image {
                 source,
                 ..
             },
-            tile_stuff,
+            ..
         } = ts;
 
         let tmx_dir = load_context
@@ -254,6 +253,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
                                     tile_entity.with_children(|child_spawner| {
                                         tile_aux_info.objects.iter().for_each(|o| {
+                                            #[allow(unused)]
                                             let mut c_e = child_spawner.spawn(TileObject(o.id));
 
                                             // FIXME: 

@@ -42,6 +42,7 @@ impl Plugin for TiledScenePlugin {
                     let mut ec = c.entity(trigger.target());
                     ec.remove::<SerializedComponents>();
 
+                    #[allow(unused)]
                     data_map.iter().for_each(|(sc, d_bytes)| match *sc {
                         #[cfg(feature = "rapier2d_colliders")]
                         SceneSerializedComponents::SerCollider => {

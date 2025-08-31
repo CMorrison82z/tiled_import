@@ -15,8 +15,8 @@ pub fn get_tile_id(TileSet { first_gid, .. }: &TileSet, Gid(gid): Gid) -> u32 {
 }
 
 pub fn tile_set_rows_and_columns(TileSet { image: Image {
-        source,
         dimensions: (width, height),
+        ..
     }, tile_size: (tile_width, tile_height), margin, spacing, .. }: &TileSet) -> (u32, u32) {
     (
         (width - (*margin as u32)) / (tile_width + (*spacing as u32)),

@@ -12,6 +12,21 @@ pub type PairF32 = (f32, f32);
 
 pub type Properties = HashMap<String, TiledPropertyType>;
 
+#[derive(Debug, Clone)]
+pub enum TiledParseError {
+    FileNotFound,
+    TiledError,
+    TiledNoRootError,
+    XmlParseError,
+}
+
+// TODO: More descriptive.
+impl std::fmt::Display for TiledParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Gid(pub u32);
 
@@ -80,15 +95,14 @@ pub enum GeometryType {
     Polyline(Vec<PairF32>),
 }
 
-// FIXME:
-// Dead code.
-#[derive(Debug)]
-struct Color {
-    pub alpha: u8,
-    pub red: u8,
-    pub green: u8,
-    pub blue: u8,
-}
+// TODO:
+// #[derive(Debug)]
+// struct Color {
+//     pub alpha: u8,
+//     pub red: u8,
+//     pub green: u8,
+//     pub blue: u8,
+// }
 
 // pub struct Text {
 //     fontfamily: String,

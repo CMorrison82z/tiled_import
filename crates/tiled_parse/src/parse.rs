@@ -21,14 +21,13 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 // trait FileLoader<'a>: Fn(&'a str) -> BoxFuture<'a, &'a str> {}
 // impl<'a, T: Fn(&'a str) -> BoxFuture<'a, &'a str>> FileLoader<'a> for T {}
 
-pub async fn parse<'a, 'b, F>(i: &'a str, file_loader: &mut F) -> Result<TiledMap, ()>
+pub async fn parse<'a, 'b, F>(i: &'a str, file_loader: &mut F) -> Result<TiledMap, TiledParseError>
 where
-    F: FnMut(String) -> BoxFuture<'b, Result<String, ()>>,
+    F: FnMut(String) -> BoxFuture<'b, Option<String>>,
 {
     let tmx_root = Xml::from_input_str(i).unwrap();
     let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
-        eprintln!("Room should be an element.");
-        return Err(());
+        return Err(TiledParseError::TiledNoRootError);
     };
 
     let (mut tile_sets, things): (Vec<_>, Vec<_>) = get_tile_sets(&elements)
@@ -42,15 +41,18 @@ where
 
     let (first_gids, file_bytes_futures): (Vec<_>, Vec<_>) = things.into_iter().unzip();
 
-    tile_sets.extend(
-        join_all(file_bytes_futures)
-            .await
-            .into_iter()
-            .zip(first_gids.into_iter())
-            .map(|(r, first_gid)| {
-                parse_tile_set(first_gid, &Xml::from_input_str(&r.unwrap()).unwrap()).unwrap()
-            }),
-    );
+    let tile_sets1: Result<Vec<_>, _> = join_all(file_bytes_futures)
+        .await
+        .into_iter()
+        .zip(first_gids.into_iter())
+        .map(|(r, first_gid)| {
+            let tile_set_xml = Xml::from_input_str(&r.ok_or(TiledParseError::FileNotFound)?)
+                .map_err(|_| TiledParseError::XmlParseError)?;
+            parse_tile_set(first_gid, &tile_set_xml).ok_or(TiledParseError::TiledError)
+        })
+        .collect();
+
+    tile_sets.extend(tile_sets1?);
 
     let map_columns = get_parse::<u32>(&map_tag.attributes, "width").unwrap();
 
@@ -69,10 +71,10 @@ where
 }
 
 /// Specifically parses tiled maps with its tilesets and such embedded in the file itself.
-pub fn parse_embedded<'a>(i: &'a str) -> Result<TiledMap, ()> {
+pub fn parse_embedded<'a>(i: &'a str) -> Result<TiledMap, TiledParseError> {
     let tmx_root = Xml::from_input_str(i).unwrap();
     let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
-        panic!("oh shit")
+        return Err(TiledParseError::TiledNoRootError)
     };
 
     let tile_sets = get_tile_sets(&elements)
@@ -162,9 +164,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
                 let animation = tile_elems
                     .iter()
                     .find(|t_e| t_e.tag_has_name("animation"))
-                    .map(|anim_xml| {
-                        parse_animation(anim_xml)
-                    });
+                    .map(|anim_xml| parse_animation(anim_xml));
                 let objects = tile_elems
                     .iter()
                     .find(|t_e| t_e.tag_has_name("objectgroup"))
@@ -185,7 +185,7 @@ fn parse_tile_set(first_gid: ID, x: &Xml) -> Option<TileSet> {
                     TileAuxInfo {
                         properties,
                         objects,
-                        animation
+                        animation,
                     },
                 ))
             })
@@ -215,14 +215,22 @@ fn parse_tmx_property(x: &Xml) -> (String, TiledPropertyType) {
 
     (
         t.attributes.get("name").unwrap().clone(),
-        match t.attributes.get("type").map(|s| s.as_str()).unwrap_or("string") {
+        match t
+            .attributes
+            .get("type")
+            .map(|s| s.as_str())
+            .unwrap_or("string")
+        {
             "string" => TiledPropertyType::String(v),
             "int" => TiledPropertyType::Int(v.parse().unwrap()),
             "float" => TiledPropertyType::Float(v.parse().unwrap()),
             "bool" => TiledPropertyType::Bool(v.parse().unwrap()),
             "file" => TiledPropertyType::File(v.parse().unwrap()),
             "object" => TiledPropertyType::Object(v.parse().unwrap()),
-            _ => panic!("Unsupported attribute type `{:?}`", t.attributes.get("type")),
+            _ => panic!(
+                "Unsupported attribute type `{:?}`",
+                t.attributes.get("type")
+            ),
         },
     )
 }
@@ -291,17 +299,15 @@ fn parse_layers(map_columns: u32, v: &Vec<TileSet>, x: &Xml) -> Option<LayerHier
             ))),
             IMAGE_LAYER => Some(LayerHierarchy::Leaf(parse_layer(
                 t,
-                LayerType::ImageLayer(
-                    ImageStuff {
-                        repeatx: get_parse(&t.attributes, "repeatx")?,
-                        repeaty: get_parse(&t.attributes, "repeaty")?,
-                        image: c
-                            .iter()
-                            .find(|x| x.tag_has_name("image"))
-                            .and_then(parse_image)
-                            .expect("Tile set should contain an image.")
-                    }
-                ),
+                LayerType::ImageLayer(ImageStuff {
+                    repeatx: get_parse(&t.attributes, "repeatx")?,
+                    repeaty: get_parse(&t.attributes, "repeaty")?,
+                    image: c
+                        .iter()
+                        .find(|x| x.tag_has_name("image"))
+                        .and_then(parse_image)
+                        .expect("Tile set should contain an image."),
+                }),
                 parse_tmx_properties(x).unwrap_or_default(),
             ))),
             _ => None,
@@ -466,19 +472,21 @@ fn parse_layer(t: &Tag, content: LayerType, properties: Properties) -> TiledLaye
 
 fn parse_image(x: &Xml) -> Option<Image> {
     match x {
-        Xml::Element(Tag { value, attributes }, _) => if value.as_str() == "image" {
-            Some(
-                Image {
+        Xml::Element(Tag { value, attributes }, _) => {
+            if value.as_str() == "image" {
+                Some(Image {
                     source: attributes.get("source")?.into(),
                     dimensions: {
                         (
                             get_parse::<u32>(&attributes, "width")?,
-                            get_parse::<u32>(&attributes, "height")?
+                            get_parse::<u32>(&attributes, "height")?,
                         )
                     },
-                }
-            )
-        } else { None },
+                })
+            } else {
+                None
+            }
+        }
         _ => None, // This will panic if Xml::Element is not matched
     }
 }
@@ -491,12 +499,11 @@ fn parse_animation(x: &Xml) -> Animation {
     v.iter()
         .filter(|n_x| n_x.tag_has_name("frame"))
         .map(|xml_element| match xml_element {
-            Xml::Element(tag, _) => {
-                AnimationFrame {
-                    tile_id: get_parse(&tag.attributes, "tileid").unwrap(),
-                    duration: get_parse(&tag.attributes, "duration").unwrap(),
-                }
-            }
+            Xml::Element(tag, _) => AnimationFrame {
+                tile_id: get_parse(&tag.attributes, "tileid").unwrap(),
+                duration: get_parse(&tag.attributes, "duration").unwrap(),
+            },
             _ => unreachable!(),
-        }).collect()
+        })
+        .collect()
 }
