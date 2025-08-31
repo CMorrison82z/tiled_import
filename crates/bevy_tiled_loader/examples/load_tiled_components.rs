@@ -1,11 +1,15 @@
 use bevy::prelude::*;
 use bevy_tiled_loader::types::*;
+use bevy::render::{
+    batching::gpu_preprocessing::{GpuPreprocessingMode, GpuPreprocessingSupport}, RenderApp
+};
 use bevy_tiled_loader::relations::*;
 use tiled_parse::types::*;
 
 pub fn main() {
-    App::new()
-        .add_plugins((
+    let mut app = App::new();
+
+    app.add_plugins((
             DefaultPlugins.set(ImagePlugin::default_nearest()),
             bevy_tiled_loader::plugin::TiledScenePlugin::default(),
             avian2d::PhysicsPlugins::default(),
@@ -20,8 +24,15 @@ pub fn main() {
             GizmoConfig::default(),
         )
         .add_systems(Startup, setup)
-        .add_systems(Update, properties_to_components)
-        .run();
+        .add_systems(Update, properties_to_components);
+
+    // NOTE: For machices with dubious GPUs.
+    // app.sub_app_mut(RenderApp)
+    //     .insert_resource(GpuPreprocessingSupport {
+    //         max_supported_mode: GpuPreprocessingMode::None,
+    //     });
+
+    app.run();
 }
 
 pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {

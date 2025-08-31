@@ -17,6 +17,6 @@ bevy_tiled_loader = { path = "crates/bevy_tiled_loader", version = "0.1.2" }
 
 try_match = "0.4.2"
 criterion = "0.6"
-futures = "*"
+futures = "0.3.31"
 itertools = "^0.14.0"
 ndarray = "0.15.6"
