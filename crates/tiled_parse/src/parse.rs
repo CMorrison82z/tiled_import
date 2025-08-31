@@ -23,7 +23,7 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 pub async fn parse<'a, 'b, F>(i: &'a str, file_loader: &mut F) -> Result<TiledMap, TiledParseError>
 where
-    F: FnMut(String) -> BoxFuture<'b, Option<String>>,
+    F: FnMut(&String) -> BoxFuture<'b, Option<String>>,
 {
     let tmx_root = Xml::from_input_str(i).unwrap();
     let Xml::Element(map_tag, Some(elements)) = &tmx_root else {
@@ -35,18 +35,18 @@ where
         .partition_map(|x| match x {
             TiledMapTileSet::Embedded(y) => Either::Left(y),
             TiledMapTileSet::External { first_gid, source } => {
-                Either::Right((first_gid, file_loader(source)))
+                Either::Right(((first_gid, source.clone()), file_loader(&source)))
             }
         });
 
-    let (first_gids, file_bytes_futures): (Vec<_>, Vec<_>) = things.into_iter().unzip();
+    let (tileset_contexts, file_bytes_futures): (Vec<_>, Vec<_>) = things.into_iter().unzip();
 
     let tile_sets1: Result<Vec<_>, _> = join_all(file_bytes_futures)
         .await
         .into_iter()
-        .zip(first_gids.into_iter())
-        .map(|(r, first_gid)| {
-            let tile_set_xml = Xml::from_input_str(&r.ok_or(TiledParseError::ExternalTileSetNotFound)?)
+        .zip(tileset_contexts.into_iter())
+        .map(|(r, (first_gid, source))| {
+            let tile_set_xml = Xml::from_input_str(&r.ok_or(TiledParseError::ExternalTileSetNotFound(source.into()))?)
                 .map_err(|_| TiledParseError::XmlParseError)?;
             parse_tile_set(first_gid, &tile_set_xml).ok_or(TiledParseError::TiledError)
         })
