@@ -97,6 +97,7 @@ Also, see [load_tiled_components](https://github.com/CMorrison82z/tiled_import/b
 
 | Bevy    | My Tiled Loader |
 | ------- | ----- |
+| 0.16    | 0.2   |
 | 0.15    | 0.1   |
 
 ## Future Features
