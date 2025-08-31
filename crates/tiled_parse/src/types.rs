@@ -14,7 +14,7 @@ pub type Properties = HashMap<String, TiledPropertyType>;
 
 #[derive(Debug, Clone)]
 pub enum TiledParseError {
-    FileNotFound,
+    ExternalTileSetNotFound,
     TiledError,
     TiledNoRootError,
     XmlParseError,

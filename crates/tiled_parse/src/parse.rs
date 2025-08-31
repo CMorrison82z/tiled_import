@@ -46,7 +46,7 @@ where
         .into_iter()
         .zip(first_gids.into_iter())
         .map(|(r, first_gid)| {
-            let tile_set_xml = Xml::from_input_str(&r.ok_or(TiledParseError::FileNotFound)?)
+            let tile_set_xml = Xml::from_input_str(&r.ok_or(TiledParseError::ExternalTileSetNotFound)?)
                 .map_err(|_| TiledParseError::XmlParseError)?;
             parse_tile_set(first_gid, &tile_set_xml).ok_or(TiledParseError::TiledError)
         })
