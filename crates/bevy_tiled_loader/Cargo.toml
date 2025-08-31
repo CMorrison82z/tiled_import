@@ -1,6 +1,6 @@
 [package]
 name = "bevy_tiled_loader"
-version = "0.1.2"
+version = "0.1.3"
 description = "Asset loader for the Tiled data parsed."
 authors.workspace = true
 edition.workspace = true
