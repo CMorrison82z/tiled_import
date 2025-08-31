@@ -254,7 +254,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
                                     tile_entity.with_children(|child_spawner| {
                                         tile_aux_info.objects.iter().for_each(|o| {
-                                            let mut c_e = child_spawner.spawn(TileObject(o.id));
+                                            let c_e = child_spawner.spawn(TileObject(o.id));
 
                                             // FIXME: 
                                             // Dynamic RigidBody's move independently from the Sprite.
@@ -371,7 +371,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             if let Some(tile_aux_info) = tile_aux_info_opt {
                                 tile_entity.with_children(|child_spawner| {
                                     tile_aux_info.objects.iter().for_each(|o| {
-                                        let mut c_e = child_spawner.spawn(TileObject(o.id));
+                                        let c_e = child_spawner.spawn(TileObject(o.id));
 
                                         // FIXME:
                                         // Dynamic RigidBody's move independently from the Sprite.
@@ -391,7 +391,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 });
                             }
                         } else {
-                            let mut obj_ent = world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));
+                            let obj_ent = world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));
 
                             #[cfg(feature = "rapier2d_colliders")]
                             if let Some(collider_bundle) = crate::rapier_colliders::object_collider(o) {
