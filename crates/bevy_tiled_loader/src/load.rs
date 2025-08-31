@@ -2,6 +2,7 @@
 //! Tiles with objects (for example a collider) is different from an object `ObjectType::Tile`.
 //! - Tiles are in a TileLayer. The associated objects are children of the Tile Entity
 //! - `ObjectType::Tile`s are just a single Entity, containing a Sprite for the tile.
+use anyhow::Context;
 #[allow(unused)]
 use bevy::asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt};
 use bevy::asset::{Handle, LoadContext};
@@ -16,8 +17,8 @@ use bevy::transform::components::Transform;
 use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid, tile_set_rows_and_columns};
 
-use crate::types::*;
 use crate::relations::is_collider;
+use crate::types::*;
 use tiled_parse::parse::*;
 use tiled_parse::types::*;
 
@@ -36,22 +37,19 @@ impl AssetLoader for TiledLoader {
     /// TODO:
     /// Add settings
     type Settings = ();
-    type Error = std::io::Error;
+    type Error = anyhow::Error;
 
     async fn load(
         &self,
         reader: &mut dyn bevy::asset::io::Reader,
         _settings: &Self::Settings,
         load_context: &mut bevy::asset::LoadContext<'_>,
-    ) -> Result<Self::Asset, Self::Error> {
+    ) -> anyhow::Result<Self::Asset> {
         let mut data = Vec::new();
         reader.read_to_end(&mut data).await?;
 
-        let data_as_utf8 = std::str::from_utf8(&data).map_err(|e| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Could not load TMX map: {e}"),
-            )
+        let data_as_utf8 = std::str::from_utf8(&data).with_context(|| {
+            format!("Currently, `TiledLoader` expects the file to be valid utf8")
         })?;
 
         // let path = p
@@ -75,12 +73,10 @@ impl AssetLoader for TiledLoader {
                     .ok()
             })
         })
-        .await
-        .map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::Other, format!("Could not load TMX map"))
-        })?;
+        .await?;
 
-        load_tmx(load_context, tm)
+        let tmx_res = load_tmx(load_context, tm)?;
+        Ok(tmx_res)
     }
 
     fn extensions(&self) -> &[&str] {
@@ -114,10 +110,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             tile_size,
             spacing,
             margin,
-            image: tiled_parse::types::Image {
-                source,
-                ..
-            },
+            image: tiled_parse::types::Image { source, .. },
             ..
         } = ts;
 
@@ -174,47 +167,192 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
 
         let tile_size_f32 = (tile_size.0 as f32, tile_size.1 as f32);
 
-        layers.iter_depth().enumerate().for_each(|(i, TiledLayer {
-                id, name, content, visible, ..
-            })| {
-            if !visible {return};
+        layers.iter_depth().enumerate().for_each(
+            |(
+                i,
+                TiledLayer {
+                    id,
+                    name,
+                    content,
+                    visible,
+                    ..
+                },
+            )| {
+                if !visible {
+                    return;
+                };
 
-            match content {
-                // TODO:
-                // Handle other layer types
-                LayerType::TileLayer(tile_layer) => {
+                match content {
                     // TODO:
-                    // Review if just setting the z-coordeinate to the iter-index is good.
-                    let spatial_bundle = (
-                        Transform::from_translation(Vec2::ZERO.extend(i as f32)),
-                        Visibility::Inherited,
-                    );
+                    // Handle other layer types
+                    LayerType::TileLayer(tile_layer) => {
+                        // TODO:
+                        // Review if just setting the z-coordeinate to the iter-index is good.
+                        let spatial_bundle = (
+                            Transform::from_translation(Vec2::ZERO.extend(i as f32)),
+                            Visibility::Inherited,
+                        );
 
-                    let layer_ent = world
-                        .spawn((Name::new(name.clone()), spatial_bundle, TiledId::Layer(*id)))
-                        .id();
+                        let layer_ent = world
+                            .spawn((Name::new(name.clone()), spatial_bundle, TiledId::Layer(*id)))
+                            .id();
 
-                    layer_ents.push(layer_ent);
+                        layer_ents.push(layer_ent);
 
-                    tile_layer
-                        .indexed_iter()
-                        .filter_map(|(p, t)| t.map(|v| (p, v)))
-                        .for_each(
-                            |(
-                                tile_pos,
-                                LayerTile {
-                                    tile: tile_gid,
-                                    flip_h,
-                                    flip_v,
-                                    flip_d,
+                        tile_layer
+                            .indexed_iter()
+                            .filter_map(|(p, t)| t.map(|v| (p, v)))
+                            .for_each(
+                                |(
+                                    tile_pos,
+                                    LayerTile {
+                                        tile: tile_gid,
+                                        flip_h,
+                                        flip_v,
+                                        flip_d,
+                                    },
+                                )| {
+                                    if flip_d {
+                                        panic!("`flip_d` is not yet implemented");
+                                    }
+                                    let (world_pos_x, world_pos_y) = (
+                                        tile_size_f32.0 * tile_pos.0 as f32,
+                                        -tile_size_f32.1 * tile_pos.1 as f32,
+                                    );
+
+                                    let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
+                                        .expect("Tile should belong to tileset");
+
+                                    let tileset_index = tile_sets
+                                        .iter()
+                                        .position(|ts| ts.first_gid == tile_tileset.first_gid)
+                                        .expect("Yes");
+
+                                    let local_tile_id = get_tile_id(tile_tileset, tile_gid);
+
+                                    let tile_aux_info_opt =
+                                        tile_tileset.tile_stuff.get(&local_tile_id);
+
+                                    let mut tile_entity = world.spawn((
+                                        Sprite {
+                                            image: tilemap_textures
+                                                .get(tileset_index)
+                                                .unwrap()
+                                                .clone(),
+                                            texture_atlas: Some(TextureAtlas {
+                                                layout: tilemap_atlases
+                                                    .get(tileset_index)
+                                                    .unwrap()
+                                                    .clone(),
+                                                index: local_tile_id as usize,
+                                            }),
+                                            flip_x: flip_h,
+                                            flip_y: flip_v,
+                                            anchor: Anchor::TopLeft,
+                                            ..Default::default()
+                                        },
+                                        TiledIndex(
+                                            tile_pos.0.try_into().unwrap(),
+                                            tile_pos.1.try_into().unwrap(),
+                                        ),
+                                        Transform::from_xyz(world_pos_x, world_pos_y, 0.),
+                                        TiledId::Tile(tile_gid.0),
+                                        ChildOf(layer_ent),
+                                    ));
+
+                                    if let Some(tile_aux_info) = tile_aux_info_opt {
+                                        tile_entity.with_children(|child_spawner| {
+                                            tile_aux_info.objects.iter().for_each(|o| {
+                                                #[allow(unused)]
+                                                let mut c_e = child_spawner.spawn(TileObject(o.id));
+
+                                                // FIXME:
+                                                // Dynamic RigidBody's move independently from the Sprite.
+                                                // Maybe put `RigidBody` (NOT the `Collider` !) in `tile_entity` ?
+                                                if is_collider(o) {
+                                                    #[cfg(feature = "rapier2d_colliders")]
+                                                    if let Some(obj_bundle) =
+                                                        crate::rapier_colliders::object_collider(o)
+                                                    {
+                                                        c_e.insert(obj_bundle);
+                                                    }
+
+                                                    #[cfg(feature = "avian2d_colliders")]
+                                                    if let Some(obj_bundle) =
+                                                        crate::avian_colliders::object_collider(o)
+                                                    {
+                                                        c_e.insert(obj_bundle);
+                                                    }
+                                                }
+                                            });
+                                        });
+
+                                        if let Some(animation) = &tile_aux_info.animation {
+                                            let AnimationFrame { tile_id, .. } = animation[0];
+
+                                            tile_entity.insert((
+                                                Sprite {
+                                                    image: tilemap_textures
+                                                        .get(tileset_index)
+                                                        .unwrap()
+                                                        .clone(),
+                                                    texture_atlas: Some(TextureAtlas {
+                                                        layout: tilemap_atlases
+                                                            .get(tileset_index)
+                                                            .unwrap()
+                                                            .clone(),
+                                                        index: tile_id as usize,
+                                                    }),
+                                                    flip_x: flip_h,
+                                                    flip_y: flip_v,
+                                                    anchor: Anchor::TopLeft,
+                                                    ..Default::default()
+                                                },
+                                                TiledAnimation {
+                                                    animation: animation
+                                                        .into_iter()
+                                                        .map(|&f| f.into())
+                                                        .collect(),
+                                                    player: TiledAnimationPlayer::Cycled,
+                                                    start_time: 0.,
+                                                },
+                                            ));
+                                        }
+                                    }
                                 },
-                            )| {
-                                if flip_d {
-                                    panic!("`flip_d` is not yet implemented");
-                                }
-                                let (world_pos_x, world_pos_y) = (
-                                    tile_size_f32.0 * tile_pos.0 as f32,
-                                    -tile_size_f32.1 * tile_pos.1 as f32,
+                            );
+                    }
+                    LayerType::ObjectLayer(os) => {
+                        let layer_entity = world.spawn((
+                            Name::new(name.clone()),
+                            Transform::IDENTITY,
+                            TiledId::Layer(*id),
+                        ));
+
+                        let layer_entity_id = layer_entity.id();
+
+                        layer_ents.push(layer_entity_id);
+
+                        os.iter().for_each(|o| {
+                            let Object {
+                                id,
+                                position,
+                                size,
+                                rotation,
+                                otype,
+                                ..
+                            } = o;
+
+                            if let &ObjectType::Tile(tile_gid) = otype {
+                                let scale_factor = if let Some((width, height)) = size {
+                                    Vec2::new(width / (tile_size_f32.0), height / (tile_size_f32.1))
+                                } else {
+                                    Vec2::ONE
+                                };
+
+                                let world_pos = Vec2::new(
+                                    position.0,
+                                    -(position.1 - scale_factor.y * tile_size_f32.1),
                                 );
 
                                 let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
@@ -239,208 +377,104 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                                 .clone(),
                                             index: local_tile_id as usize,
                                         }),
-                                        flip_x: flip_h,
-                                        flip_y: flip_v,
                                         anchor: Anchor::TopLeft,
                                         ..Default::default()
                                     },
-                                    TiledIndex(tile_pos.0.try_into().unwrap(), tile_pos.1.try_into().unwrap()),
-                                    Transform::from_xyz(world_pos_x, world_pos_y, 0.),
-                                    TiledId::Tile(tile_gid.0),
-                                    ChildOf(layer_ent),
+                                    // FIXME: Use a correct z-index.
+                                    Transform::from_translation(world_pos.extend(3.))
+                                        .with_rotation(Quat::from_axis_angle(
+                                            Vec3::Z,
+                                            rotation.to_radians(),
+                                        ))
+                                        .with_scale(scale_factor.extend(1.)),
+                                    TiledId::Object(*id),
+                                    ChildOf(layer_entity_id),
                                 ));
 
                                 if let Some(tile_aux_info) = tile_aux_info_opt {
                                     tile_entity.with_children(|child_spawner| {
                                         tile_aux_info.objects.iter().for_each(|o| {
+                                            // NOTE: Must be `mut` for when features are enabled.
                                             #[allow(unused)]
                                             let mut c_e = child_spawner.spawn(TileObject(o.id));
 
-                                            // FIXME: 
+                                            // FIXME:
                                             // Dynamic RigidBody's move independently from the Sprite.
                                             // Maybe put `RigidBody` (NOT the `Collider` !) in `tile_entity` ?
                                             if is_collider(o) {
                                                 #[cfg(feature = "rapier2d_colliders")]
-                                                if let Some(obj_bundle) = crate::rapier_colliders::object_collider(o) {
+                                                if let Some(obj_bundle) =
+                                                    crate::rapier_colliders::object_collider(o)
+                                                {
                                                     c_e.insert(obj_bundle);
                                                 }
 
                                                 #[cfg(feature = "avian2d_colliders")]
-                                                if let Some(obj_bundle) = crate::avian_colliders::object_collider(o) {
+                                                if let Some(obj_bundle) =
+                                                    crate::avian_colliders::object_collider(o)
+                                                {
                                                     c_e.insert(obj_bundle);
                                                 }
                                             }
                                         });
                                     });
-
-                                    if let Some(animation) = &tile_aux_info.animation {
-                                        let AnimationFrame { tile_id, .. } = animation[0];
-
-                                        tile_entity.insert((
-                                            Sprite {
-                                                image: tilemap_textures.get(tileset_index).unwrap().clone(),
-                                                texture_atlas: Some(TextureAtlas {
-                                                    layout: tilemap_atlases
-                                                        .get(tileset_index)
-                                                        .unwrap()
-                                                        .clone(),
-                                                    index: tile_id as usize,
-                                                }),
-                                                flip_x: flip_h,
-                                                flip_y: flip_v,
-                                                anchor: Anchor::TopLeft,
-                                                ..Default::default()
-                                            },
-                                            TiledAnimation {
-                                                animation: animation.into_iter().map(|&f| f.into()).collect(),
-                                                player: TiledAnimationPlayer::Cycled,
-                                                start_time: 0.
-                                            }
-                                        ));
-                                    }
                                 }
-                            },
-                        );
-                }
-                LayerType::ObjectLayer(os) => {
-                    let layer_entity = world.spawn((
-                        Name::new(name.clone()),
-                        Transform::IDENTITY,
-                        TiledId::Layer(*id),
-                    ));
-
-                    let layer_entity_id = layer_entity.id();
-
-                    layer_ents.push(layer_entity_id);
-
-                    os.iter().for_each(|o| {
-                        let Object {
-                            id,
-                            position,
-                            size,
-                            rotation,
-                            otype,
-                            ..
-                        } = o;
-
-                        if let &ObjectType::Tile(tile_gid) = otype {
-                            let scale_factor = if let Some((width, height)) = size {
-                                Vec2::new(width / (tile_size_f32.0), height / (tile_size_f32.1))
                             } else {
-                                Vec2::ONE
-                            };
+                                // NOTE: Must be `mut` for when features are enabled.
+                                #[allow(unused)]
+                                let mut obj_ent =
+                                    world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));
 
-                            let world_pos = Vec2::new(
-                                position.0,
-                                -(position.1 - scale_factor.y * tile_size_f32.1),
-                            );
+                                #[cfg(feature = "rapier2d_colliders")]
+                                if let Some(collider_bundle) =
+                                    crate::rapier_colliders::object_collider(o)
+                                {
+                                    obj_ent.insert(collider_bundle);
+                                }
 
-                            let tile_tileset = get_tileset_for_gid(tile_sets, tile_gid)
-                                .expect("Tile should belong to tileset");
-
-                            let tileset_index = tile_sets
-                                .iter()
-                                .position(|ts| ts.first_gid == tile_tileset.first_gid)
-                                .expect("Yes");
-
-                            let local_tile_id = get_tile_id(tile_tileset, tile_gid);
-
-                            let tile_aux_info_opt = tile_tileset.tile_stuff.get(&local_tile_id);
-
-                            let mut tile_entity = world.spawn((
-                                Sprite {
-                                    image: tilemap_textures.get(tileset_index).unwrap().clone(),
-                                    texture_atlas: Some(TextureAtlas {
-                                        layout: tilemap_atlases.get(tileset_index).unwrap().clone(),
-                                        index: local_tile_id as usize,
-                                    }),
-                                    anchor: Anchor::TopLeft,
-                                    ..Default::default()
-                                },
-                                // FIXME: Use a correct z-index.
-                                Transform::from_translation(world_pos.extend(3.))
-                                    .with_rotation(Quat::from_axis_angle(
-                                        Vec3::Z,
-                                        rotation.to_radians(),
-                                    ))
-                                    .with_scale(scale_factor.extend(1.)),
-                                TiledId::Object(*id),
-                                ChildOf(layer_entity_id),
-                            ));
-
-                            if let Some(tile_aux_info) = tile_aux_info_opt {
-                                tile_entity.with_children(|child_spawner| {
-                                    tile_aux_info.objects.iter().for_each(|o| {
-                                        // NOTE: Must be `mut` for when features are enabled.
-                                        #[allow(unused)]
-                                        let mut c_e = child_spawner.spawn(TileObject(o.id));
-
-                                        // FIXME:
-                                        // Dynamic RigidBody's move independently from the Sprite.
-                                        // Maybe put `RigidBody` (NOT the `Collider` !) in `tile_entity` ?
-                                        if is_collider(o) {
-                                            #[cfg(feature = "rapier2d_colliders")]
-                                            if let Some(obj_bundle) = crate::rapier_colliders::object_collider(o) {
-                                                c_e.insert(obj_bundle);
-                                            }
-
-                                            #[cfg(feature = "avian2d_colliders")]
-                                            if let Some(obj_bundle) = crate::avian_colliders::object_collider(o) {
-                                                c_e.insert(obj_bundle);
-                                            }
-                                        }
-                                    });
-                                });
+                                #[cfg(feature = "avian2d_colliders")]
+                                if let Some(collider_bundle) =
+                                    crate::avian_colliders::object_collider(o)
+                                {
+                                    obj_ent.insert(collider_bundle);
+                                }
                             }
-                        } else {
-                            // NOTE: Must be `mut` for when features are enabled.
-                            #[allow(unused)]
-                            let mut obj_ent = world.spawn((ChildOf(layer_entity_id), TiledId::Object(*id)));
-
-                            #[cfg(feature = "rapier2d_colliders")]
-                            if let Some(collider_bundle) = crate::rapier_colliders::object_collider(o) {
-                                obj_ent.insert(collider_bundle);
-                            }
-
-                            #[cfg(feature = "avian2d_colliders")]
-                            if let Some(collider_bundle) = crate::avian_colliders::object_collider(o) {
-                                obj_ent.insert(collider_bundle);
-                            }
-                        }
-                    });
-                }
-                LayerType::ImageLayer(ImageStuff {
-                    repeatx,
-                    repeaty,
-                    image: tiled_parse::types::Image {
-                        source,
-                        ..
+                        });
                     }
-                }) => {
-                    let tmx_dir = load_context
-                        .path()
-                        .parent()
-                        .expect("The asset load context was empty.");
-                    let tile_path = tmx_dir.join(&source);
+                    LayerType::ImageLayer(ImageStuff {
+                        repeatx,
+                        repeaty,
+                        image: tiled_parse::types::Image { source, .. },
+                    }) => {
+                        let tmx_dir = load_context
+                            .path()
+                            .parent()
+                            .expect("The asset load context was empty.");
+                        let tile_path = tmx_dir.join(&source);
 
-                    layer_ents.push(world.spawn((
-                        Name::new(name.clone()),
-                        Transform::IDENTITY,
-                        TiledId::Layer(*id),
-                        Sprite {
-                            image: scene_load_context.load(AssetPath::from(tile_path)),
-                            image_mode: SpriteImageMode::Tiled {
-                                tile_x: *repeatx,
-                                tile_y: *repeaty,
-                                stretch_value: 1.
-                            },
-                            ..default()
-                        }
-                    )).id());
+                        layer_ents.push(
+                            world
+                                .spawn((
+                                    Name::new(name.clone()),
+                                    Transform::IDENTITY,
+                                    TiledId::Layer(*id),
+                                    Sprite {
+                                        image: scene_load_context.load(AssetPath::from(tile_path)),
+                                        image_mode: SpriteImageMode::Tiled {
+                                            tile_x: *repeatx,
+                                            tile_y: *repeaty,
+                                            stretch_value: 1.,
+                                        },
+                                        ..default()
+                                    },
+                                ))
+                                .id(),
+                        );
+                    }
+                    LayerType::Group => println!("Group layer {name}"),
                 }
-                LayerType::Group => println!("Group layer {name}"),
-            }
-        });
+            },
+        );
 
         // TODO:
         // I'm not convinced this `per-entity` thing is very good.

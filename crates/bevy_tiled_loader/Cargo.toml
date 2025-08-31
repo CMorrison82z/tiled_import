@@ -19,6 +19,7 @@ avian2d_colliders = ["dep:avian2d"]
 [dependencies]
 try_match.workspace = true
 tiled_parse.workspace = true
+anyhow = "1.0"
 bevy_platform = "0.16"
 bevy = {version = "0.16", default-features = false, features = [
   "std",

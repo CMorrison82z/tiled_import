@@ -27,6 +27,8 @@ impl std::fmt::Display for TiledParseError {
     }
 }
 
+impl std::error::Error for TiledParseError {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Gid(pub u32);
 
