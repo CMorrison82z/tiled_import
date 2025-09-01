@@ -104,6 +104,7 @@ Also, see [load_tiled_components](https://github.com/CMorrison82z/tiled_import/b
 
 - Settings to control how the `*.tmx` is parsed and how / what gets generated.
 - Migrate to Bincode 2
+- Be non-std
 
 ## Contributing
 

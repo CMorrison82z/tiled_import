@@ -15,7 +15,7 @@ tiled_parse = { path = "crates/tiled_parse", version = "0.2.3" }
 tiled_parse_tree = { path = "crates/tree", version = "0.1.1" }
 bevy_tiled_loader = { path = "crates/bevy_tiled_loader", version = "0.2.3" }
 
-try_match = "0.4.2"
-itertools = "^0.14.0"
-ndarray = "0.15.6"
+try_match = "0.4"
+itertools = "0.14"
+ndarray = "0.16"
 criterion = "0.6"
