@@ -26,10 +26,10 @@ pub fn main() {
     .add_systems(Update, properties_to_components);
 
     // NOTE: For machices with dubious GPUs.
-    // app.sub_app_mut(RenderApp)
-    //     .insert_resource(GpuPreprocessingSupport {
-    //         max_supported_mode: GpuPreprocessingMode::None,
-    //     });
+    app.sub_app_mut(RenderApp)
+        .insert_resource(GpuPreprocessingSupport {
+            max_supported_mode: GpuPreprocessingMode::None,
+        });
 
     app.run();
 }

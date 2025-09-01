@@ -4,7 +4,7 @@
 use std::{collections::HashMap, fmt::Debug, future::Future, pin::Pin, str::FromStr};
 
 use base64::{prelude::BASE64_STANDARD, Engine};
-use futures::future::join_all;
+use futures_util::future::join_all;
 use itertools::{Either, Itertools};
 use ndarray::Array2;
 use nom::error::ErrorKind;
