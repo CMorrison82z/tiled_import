@@ -5,6 +5,8 @@ use bevy::transform::components::Transform;
 use avian2d::prelude::*;
 use bevy_platform::collections::HashMap;
 use bincode::ErrorKind;
+#[cfg(feature = "tilemap_collider")]
+use i_overlay::{i_float::float::point::FloatPoint, i_shape::base::data::Shapes};
 use try_match::match_ok;
 
 use crate::types::{SceneSerializedComponents, SerializedComponents};
@@ -114,4 +116,41 @@ fn construct_geometry(
         ),
         _ => todo!(),
     }
+}
+
+#[cfg(feature = "tilemap_collider")]
+pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
+    use i_triangle::float::triangulation::Triangulation;
+    use i_triangle::float::triangulatable::Triangulatable;
+
+    let delaunay_triangulation: Triangulation<FloatPoint<f32>, u32> =
+        s.triangulate().into_delaunay().to_triangulation();
+
+    let (points, edges) = (
+        delaunay_triangulation.points.into_iter().map(|FloatPoint { x, y }| Vec2 {x, y}).collect(),
+        delaunay_triangulation.indices.chunks(3).flat_map(|s| match s {
+            &[a, b, c] => vec![[a, b], [b, c], [a, c]],
+            _ => unreachable!()
+        }).collect(),
+    );
+
+    (
+        SerializedComponents(HashMap::from([
+            (
+                SceneSerializedComponents::SerCollider,
+                bincode::serialize(&Collider::convex_decomposition(points, edges)).unwrap(),
+            ),
+            // TODO:
+            // Parse a tiled property to allow other RigidBody types
+            (
+                SceneSerializedComponents::SerRigidBody,
+                bincode::serialize(&RigidBody::Static).unwrap(),
+            ),
+        ])),
+        Transform::default()
+    )
+// pub fn shapes_to_colliders(ss: Vec<Contour<Vec2>>) -> Vec<Collider> {
+// ss.into_iter().map(|s| {
+//     Collider::convex_hull(s).unwrap()
+// }).collect()
 }

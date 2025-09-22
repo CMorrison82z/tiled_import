@@ -11,6 +11,9 @@ use bincode::ErrorKind;
 use crate::types::{SceneSerializedComponents, SerializedComponents};
 use tiled_parse::types::*;
 
+#[cfg(feature = "tilemap_collider")]
+use i_overlay::{i_float::float::point::FloatPoint, i_shape::base::data::Shapes};
+
 // TODO:
 // Likely can be made more general and convenient
 pub fn deserialize_collider(b: &[u8]) -> Result<Collider, Box<ErrorKind>> {
@@ -105,4 +108,9 @@ fn construct_geometry(
         ),
         _ => todo!(),
     }
+}
+
+#[cfg(feature = "tilemap_collider")]
+pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
+    todo!()
 }

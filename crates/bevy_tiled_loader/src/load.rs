@@ -18,7 +18,9 @@ use bevy_rapier2d::prelude::*;
 use tiled_parse::relations::{get_tile_id, get_tileset_for_gid, tile_set_rows_and_columns};
 
 use crate::relations::is_collider;
-use crate::types::*;
+#[cfg(feature = "tilemap_collider")]
+use crate::tilemap_collider::*;
+use crate::{avian_colliders, types::*};
 use tiled_parse::parse::*;
 use tiled_parse::types::*;
 
@@ -163,11 +165,9 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
             .spawn((Transform::IDENTITY, Visibility::Inherited))
             .id();
 
-        let mut layer_ents = Vec::new();
-
         let tile_size_f32 = (tile_size.0 as f32, tile_size.1 as f32);
 
-        layers.iter_depth().enumerate().for_each(
+        let layer_ents : Vec<_> = layers.iter_depth().enumerate().filter_map(
             |(
                 i,
                 TiledLayer {
@@ -179,7 +179,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                 },
             )| {
                 if !visible {
-                    return;
+                    return None;
                 };
 
                 match content {
@@ -193,11 +193,11 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             Visibility::Inherited,
                         );
 
+                        // TODO:
+                        // Might be able to spawn with `children` macro, then no need to bind to `layer_ent`
                         let layer_ent = world
                             .spawn((Name::new(name.clone()), spatial_bundle, TiledId::Layer(*id)))
                             .id();
-
-                        layer_ents.push(layer_ent);
 
                         tile_layer
                             .indexed_iter()
@@ -321,6 +321,72 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                     }
                                 },
                             );
+
+                        if name == MAIN_TILE_LAYER {
+                            // FIXME:
+                            // This is some pretty awful code.
+                            let shapes = gen_shapes(
+                                tile_size_f32.0,
+                                tile_layer.indexed_iter().map(|(ix, o_tile)| {
+                                    (
+                                        ix,
+                                        o_tile.map(|t| {
+                                            let tile_tileset =
+                                                get_tileset_for_gid(tile_sets, t.tile)
+                                                    .expect("Tile should belong to tileset");
+
+                                            let local_tile_id = get_tile_id(tile_tileset, t.tile);
+
+                                            let tile_aux_info_opt =
+                                                tile_tileset.tile_stuff.get(&local_tile_id);
+
+                                            tile_aux_info_opt.and_then(|tile_aux_info| {
+                                                if let Some(default_orientation) = tile_aux_info.properties.iter().find_map(|p| {
+                                                    match p {
+                                                        (k, TiledPropertyType::String(s)) if k.to_lowercase() == "triangle" => TriangleOrientation::try_from_str(&*s),
+                                                        _ => None
+                                                    }
+                                                }) {
+                                                    let mut flipped_ori = default_orientation;
+                                                    if t.flip_h {
+                                                        flipped_ori = default_orientation.flip_x()
+                                                    }
+                                                    if t.flip_v {
+                                                        flipped_ori = default_orientation.flip_y()
+                                                    }
+                                                    Some(TileShape::Triangle(flipped_ori))
+                                                } else if let Some(o) = tile_aux_info.objects.iter().find(|o|
+                                                    // If there exists an object that represents
+                                                    // the collision geometry for the object.
+                                                    o.properties.iter().any(|(k, v)| matches!(
+                                                        (k.as_str(), v),
+                                                        (MAIN_COLLIDER_OBJECT, TiledPropertyType::Bool(true))
+                                                    ))
+                                                ) {
+                                                    tiled_object_to_tile_shape(tile_size.0 as f32, o)
+                                                } else {
+                                                    None
+                                                }
+                                            }).unwrap_or(TileShape::Square)
+                                        }),
+                                    )
+                                }),
+                            );
+
+                            // TODO:
+                            // Take the shapes and generate associated colliders...
+                            #[cfg(feature = "avian2d_colliders")]
+                            world.spawn((
+                                avian_colliders::shapes_to_collider(shapes),
+                                ChildOf(layer_ent)
+                            ));
+                            #[cfg(feature = "rapier2d_colliders")]
+                            world.spawn((
+                                rapier_colliders::shapes_to_collider(shapes),
+                                ChildOf(layer_ent)
+                            ));
+                        }
+                        Some(layer_ent)
                     }
                     LayerType::ObjectLayer(os) => {
                         let layer_entity = world.spawn((
@@ -330,8 +396,6 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                         ));
 
                         let layer_entity_id = layer_entity.id();
-
-                        layer_ents.push(layer_entity_id);
 
                         os.iter().for_each(|o| {
                             let Object {
@@ -440,6 +504,8 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 }
                             }
                         });
+
+                        Some(layer_entity_id)
                     }
                     LayerType::ImageLayer(ImageStuff {
                         repeatx,
@@ -452,29 +518,50 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                             .expect("The asset load context was empty.");
                         let tile_path = tmx_dir.join(&source);
 
-                        layer_ents.push(
-                            world
-                                .spawn((
-                                    Name::new(name.clone()),
-                                    Transform::IDENTITY,
-                                    TiledId::Layer(*id),
-                                    Sprite {
-                                        image: scene_load_context.load(AssetPath::from(tile_path)),
-                                        image_mode: SpriteImageMode::Tiled {
-                                            tile_x: *repeatx,
-                                            tile_y: *repeaty,
-                                            stretch_value: 1.,
-                                        },
-                                        ..default()
+                        Some(world
+                            .spawn((
+                                Name::new(name.clone()),
+                                Transform::IDENTITY,
+                                TiledId::Layer(*id),
+                                Sprite {
+                                    image: scene_load_context.load(AssetPath::from(tile_path)),
+                                    image_mode: SpriteImageMode::Tiled {
+                                        tile_x: *repeatx,
+                                        tile_y: *repeaty,
+                                        stretch_value: 1.,
                                     },
-                                ))
-                                .id(),
-                        );
+                                    ..default()
+                                },
+                            ))
+                            .id())
                     }
-                    LayerType::Group => println!("Group layer {name}"),
+                    LayerType::Group => {
+                        // TODO:
+                        // Put things into an empty entity ???
+                        println!("Group layer {name}");
+                        None
+                    }
                 }
             },
-        );
+        ).collect();
+
+        // TODO:
+        // Put the colliders into entities in a new collider Entity layer (one that obviously
+        // doesn't actually exist in the source tmx)
+        // #[cfg(feature = "tilemap_collider")]
+        // layers.iter_depth().find_map(|
+        //         TiledLayer {
+        //             name,
+        //             content,
+        //             ..
+        //         }
+        //     | {
+        //         match content {
+        //             LayerType::TileLayer(tile_layer) ,
+        //             _ => None
+        //         }
+        // });
+
 
         // TODO:
         // I'm not convinced this `per-entity` thing is very good.

@@ -10,6 +10,9 @@ use bevy_platform::collections::HashMap;
 
 use tiled_parse::types::*;
 
+pub const MAIN_COLLIDER_OBJECT : &str = "main_collider";
+pub const MAIN_TILE_LAYER : &str = "main";
+
 /// When the dependencies have loaded, will add `SceneRoot(TiledMapAsset.scene)` with `TiledMapScene`
 #[derive(Component)]
 #[require(Transform, Visibility)]

@@ -28,8 +28,13 @@ compile_error!(
 #[cfg(feature = "avian2d_colliders")]
 pub mod avian_colliders;
 pub mod load;
+/// WARN:
+/// DO NOT DELETE ! USEFUL FUNCTIONS `get_centered_rings` AND OTHERS WITHIN !
+// pub mod array_collision;
 pub mod plugin;
 #[cfg(feature = "rapier2d_colliders")]
 pub mod rapier_colliders;
+#[cfg(feature = "tilemap_collider")]
+pub mod tilemap_collider;
 pub mod relations;
 pub mod types;

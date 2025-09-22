@@ -203,7 +203,7 @@ pub struct TileAuxInfo {
     pub animation: Option<Animation>,
     pub properties: Properties,
     /// NOTE:
-    /// This departure from Tiled's file specification. I don't like the idea of encoding the objects as an entire layer.
+    /// This is a departure from Tiled's file specification. I don't like the idea of encoding the objects as an entire layer.
     pub objects: Vec<Object>,
 }
 
