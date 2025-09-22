@@ -322,6 +322,7 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 },
                             );
 
+                        #[cfg(feature = "tilemap_collider")]
                         if name == MAIN_TILE_LAYER {
                             // FIXME:
                             // This is some pretty awful code.

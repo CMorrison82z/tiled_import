@@ -272,11 +272,13 @@ pub fn tiled_object_to_tile_shape(meter: f32, o: &Object) -> Option<TileShape> {
         },
         GeometryType::Ellipse => ellipse_contour(meter, size?.0 / 2., size?.1 / 2.).collect(),
         GeometryType::Point => vec![Vec2::ZERO],
-        GeometryType::Polygon(v) => v.iter().map(|&(x, y)| Vec2 {x, y}).collect(),
+        // NOTE:
+        // Divided by `meter`, because `contextualize` re-introduces the `meter`...
+        GeometryType::Polygon(v) => v.iter().map(|&(x, y)| Vec2 {x, y} / meter).collect(),
         // FIXME:
         // A polyline is not necessarily a closed loop. However, the `Contour`s assume it is
         // closed.
-        GeometryType::Polyline(v) => v.iter().map(|&(x, y)| Vec2 {x, y}).collect(),
+        GeometryType::Polyline(v) => v.iter().map(|&(x, y)| Vec2 {x, y} / meter).collect(),
     }))
 }
 
