@@ -268,7 +268,7 @@ pub fn tiled_object_to_tile_shape(meter: f32, o: &Object) -> Option<TileShape> {
     Some(TileShape::Polygon(match geo_type {
         GeometryType::Rectangle => {
             let (width, height) = size?;
-            box_contour().map(|v| v * Vec2 { x: width, y: height }).collect()
+            box_contour().map(|v| v * Vec2 { x: width, y: height } / meter).collect()
         },
         GeometryType::Ellipse => ellipse_contour(meter, size?.0 / 2., size?.1 / 2.).collect(),
         GeometryType::Point => vec![Vec2::ZERO],
