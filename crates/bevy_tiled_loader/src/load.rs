@@ -373,13 +373,12 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                 }),
                             );
 
-                            // TODO:
-                            // Take the shapes and generate associated colliders...
                             #[cfg(feature = "avian2d_colliders")]
                             world.spawn((
                                 avian_colliders::shapes_to_collider(shapes),
                                 ChildOf(layer_ent)
                             ));
+                            println!("GENERATED COLLIDER");
                             #[cfg(feature = "rapier2d_colliders")]
                             world.spawn((
                                 rapier_colliders::shapes_to_collider(shapes),

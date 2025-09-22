@@ -126,13 +126,13 @@ pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
     let delaunay_triangulation: Triangulation<FloatPoint<f32>, u32> =
         s.triangulate().into_delaunay().to_triangulation();
 
-    let (points, edges) = (
+    let (points, edges) = dbg!((
         delaunay_triangulation.points.into_iter().map(|FloatPoint { x, y }| Vec2 {x, y}).collect(),
         delaunay_triangulation.indices.chunks(3).flat_map(|s| match s {
             &[a, b, c] => vec![[a, b], [b, c], [a, c]],
             _ => unreachable!()
         }).collect(),
-    );
+    ));
 
     (
         SerializedComponents(HashMap::from([
