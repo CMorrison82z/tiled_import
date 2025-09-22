@@ -36,6 +36,10 @@ pub struct TileObject(pub tiled_parse::types::ID);
 #[derive(Component, Reflect, Copy, Clone, Debug)]
 pub struct TiledIndex(pub usize, pub usize);
 
+#[cfg(feature = "tilemap_collider")]
+#[derive(Component, Reflect, Copy, Clone, Debug)]
+pub struct MapCollider;
+
 impl Into<(usize, usize)> for TiledIndex {
     fn into(self) -> (usize, usize) {
         (self.0, self.1)

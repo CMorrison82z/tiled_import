@@ -21,6 +21,7 @@ impl Plugin for TiledScenePlugin {
             .register_type::<TileObject>()
             .register_type::<TiledIndex>()
             .register_type::<TiledAnimation>()
+            .register_type::<MapCollider>()
             .register_type_data::<TiledId, ReflectComponent>()
             .register_type_data::<TileObject, ReflectComponent>()
             .register_type_data::<TiledIndex, ReflectComponent>()
