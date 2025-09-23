@@ -342,33 +342,30 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                                 tile_tileset.tile_stuff.get(&local_tile_id);
 
                                             tile_aux_info_opt.and_then(|tile_aux_info| {
-                                                if let Some(default_orientation) = tile_aux_info.properties.iter().find_map(|p| {
+                                                tile_aux_info.properties.iter().find_map(|p| {
                                                     match p {
-                                                        (k, TiledPropertyType::String(s)) if k.to_lowercase() == "triangle" => TriangleOrientation::try_from_str(&*s),
+                                                        (k, TiledPropertyType::String(s)) if k.to_lowercase() == "triangle" => 
+                                                            Some(TileShape::Triangle(TriangleOrientation::try_from_str(&*s).unwrap())),
                                                         _ => None
                                                     }
-                                                }) {
-                                                    let mut flipped_ori = default_orientation;
-                                                    if t.flip_h {
-                                                        flipped_ori = default_orientation.flip_x()
-                                                    }
-                                                    if t.flip_v {
-                                                        flipped_ori = default_orientation.flip_y()
-                                                    }
-                                                    Some(TileShape::Triangle(flipped_ori))
-                                                } else if let Some(o) = tile_aux_info.objects.iter().find(|o|
+                                                }).or(tile_aux_info.objects.iter().find_map(|o|
                                                     // If there exists an object that represents
                                                     // the collision geometry for the object.
-                                                    o.properties.iter().any(|(k, v)| matches!(
+                                                    if o.properties.iter().any(|(k, v)| matches!(
                                                         (k.as_str(), v),
                                                         (MAIN_COLLIDER_OBJECT, TiledPropertyType::Bool(true))
-                                                    ))
-                                                ) {
-                                                    tiled_object_to_tile_shape(tile_size.0 as f32, o)
-                                                } else {
-                                                    None
+                                                    )) {
+                                                        tiled_object_to_tile_shape(tile_size.0 as f32, o)
+                                                    } else {None}
+                                                ))
+                                            }).map(|s|
+                                                match (t.flip_h, t.flip_v) {
+                                                    (true, false) => s.flip_x(),
+                                                    (false, true) => s.flip_y(),
+                                                    (true, true) => s.flip_x().flip_y(),
+                                                    (false, false) => s
                                                 }
-                                            }).unwrap_or(TileShape::Square)
+                                            ).unwrap_or(TileShape::Square)
                                         }),
                                     )
                                 }),

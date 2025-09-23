@@ -155,11 +155,11 @@ fn check_ellipse_contour() {
 
 pub fn right_triangle_contour(orientaton: TriangleOrientation) -> impl Iterator<Item = Vec2> {
     [
-        Vec2::from_angle(orientaton.into_angle()).rotate(Vec2 { x: 0., y: 0. }),
-        Vec2::from_angle(orientaton.into_angle()).rotate(Vec2 { x: 1., y: 0. }),
-        Vec2::from_angle(orientaton.into_angle()).rotate(Vec2 { x: 0., y: 1. }),
+        Vec2::from_angle(orientaton.into_angle()).rotate(Vec2 { x: - 0.5, y: - 0.5 }),
+        Vec2::from_angle(orientaton.into_angle()).rotate(Vec2 { x: 0.5, y: - 0.5 }),
+        Vec2::from_angle(orientaton.into_angle()).rotate(Vec2 { x: - 0.5, y: 0.5 }),
     ]
-    .into_iter()
+    .into_iter().map(|v| v + Vec2::splat(0.5))
 }
 
 impl TriangleOrientation {
@@ -194,6 +194,27 @@ impl TriangleOrientation {
             TriangleOrientation::TopRight => Self::BottomRight,
             TriangleOrientation::BottomLeft => Self::TopLeft,
             TriangleOrientation::BottomRight => Self::TopRight
+        }
+    }
+}
+
+impl TileShape {
+    pub fn flip_x(self) -> Self {
+        match self {
+            TileShape::Triangle(o) => TileShape::Triangle(o.flip_x()),
+            TileShape::Polygon(vs) => TileShape::Polygon(vs.into_iter().rev().map(|Vec2 {x, y}| {
+                Vec2 {x: - x, y}
+            }).collect()),
+            x => x
+        }
+    }
+    pub fn flip_y(self) -> Self {
+        match self {
+            TileShape::Triangle(o) => TileShape::Triangle(o.flip_y()),
+            TileShape::Polygon(vs) => TileShape::Polygon(vs.into_iter().rev().map(|Vec2 {x, y}| {
+                Vec2 {x: x, y: - y}
+            }).collect()),
+            x => x
         }
     }
 }

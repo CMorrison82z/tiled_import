@@ -126,19 +126,6 @@ pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
     let delaunay_triangulation: Triangulation<FloatPoint<f32>, u32> =
         s.triangulate().into_delaunay().to_triangulation();
 
-    // let delaunay_triangulation: Triangulation<FloatPoint<f32>, usize> =
-    //     s.triangulate().into_delaunay().to_triangulation();
-
-    // let points: Vec<Vec2> = delaunay_triangulation.points.into_iter().map(|FloatPoint { x, y }| Vec2 {x, y: - y}).collect();
-
-    // let (points, edges) = (
-    //     delaunay_triangulation.points.into_iter().map(|FloatPoint { x, y }| Vec2 {x, y: - y}).collect(),
-    //     delaunay_triangulation.indices.chunks(3).flat_map(|s| match s {
-    //         &[a, b, c] => vec![[a, b], [b, c], [a, c]],
-    //         _ => unreachable!()
-    //     }).collect(),
-    // );
-
     let (points, triangles) = (
         delaunay_triangulation.points.into_iter().map(|FloatPoint { x, y }| Vec2 {x, y: - y}).collect(),
         delaunay_triangulation.indices.chunks(3).map(|s| match s {
@@ -147,21 +134,12 @@ pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
         }).collect(),
     );
 
-    // let triangles: Vec<(Vec2, f32, Collider)> = delaunay_triangulation.indices.chunks(3).map(|s| match s {
-    //     &[a, b, c] => (Vec2::ZERO, 0., Collider::triangle_unchecked(points[a], points[b], points[c])),
-    //     _ => unreachable!()
-    // }).collect();
-
     (
         SerializedComponents(HashMap::from([
             (
                 SceneSerializedComponents::SerCollider,
                 bincode::serialize(&Collider::trimesh(points, triangles)).unwrap()
-                // bincode::serialize(&Collider::compound(triangles)).unwrap(),
-                // bincode::serialize(&Collider::convex_decomposition(points, edges)).unwrap(),
             ),
-            // TODO:
-            // Parse a tiled property to allow other RigidBody types
             (
                 SceneSerializedComponents::SerRigidBody,
                 bincode::serialize(&RigidBody::Static).unwrap(),
@@ -169,8 +147,4 @@ pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
         ])),
         Transform::default()
     )
-// pub fn shapes_to_colliders(ss: Vec<Contour<Vec2>>) -> Vec<Collider> {
-// ss.into_iter().map(|s| {
-//     Collider::convex_hull(s).unwrap()
-// }).collect()
 }
