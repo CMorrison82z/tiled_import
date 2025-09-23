@@ -167,8 +167,8 @@ impl TriangleOrientation {
         match self {
             TriangleOrientation::TopLeft => 0.,
             TriangleOrientation::TopRight => PI / 2.,
-            TriangleOrientation::BottomLeft => PI,
-            TriangleOrientation::BottomRight => 3. * PI / 2.,
+            TriangleOrientation::BottomRight => PI,
+            TriangleOrientation::BottomLeft => 3. * PI / 2.
         }
     }
     pub fn try_from_str(s: &str) -> Option<Self> {
@@ -199,20 +199,20 @@ impl TriangleOrientation {
 }
 
 impl TileShape {
-    pub fn flip_x(self) -> Self {
+    pub fn flip_x(self, meter: f32) -> Self {
         match self {
             TileShape::Triangle(o) => TileShape::Triangle(o.flip_x()),
             TileShape::Polygon(vs) => TileShape::Polygon(vs.into_iter().rev().map(|Vec2 {x, y}| {
-                Vec2 {x: - x, y}
+                Vec2 {x: meter - x, y}
             }).collect()),
             x => x
         }
     }
-    pub fn flip_y(self) -> Self {
+    pub fn flip_y(self, meter: f32) -> Self {
         match self {
             TileShape::Triangle(o) => TileShape::Triangle(o.flip_y()),
             TileShape::Polygon(vs) => TileShape::Polygon(vs.into_iter().rev().map(|Vec2 {x, y}| {
-                Vec2 {x: x, y: - y}
+                Vec2 {x, y: meter - y}
             }).collect()),
             x => x
         }
