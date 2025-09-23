@@ -360,9 +360,9 @@ fn load_tmx(load_context: &mut LoadContext, tm: TiledMap) -> Result<TiledMapAsse
                                                 ))
                                             }).map(|s|
                                                 match (t.flip_h, t.flip_v) {
-                                                    (true, false) => s.flip_x(tile_size.0 as f32),
-                                                    (false, true) => s.flip_y(tile_size.0 as f32),
-                                                    (true, true) => s.flip_x(tile_size.0 as f32).flip_y(tile_size.0 as f32),
+                                                    (true, false) => s.flip_x(),
+                                                    (false, true) => s.flip_y(),
+                                                    (true, true) => s.flip_x().flip_y(),
                                                     (false, false) => s
                                                 }
                                             ).unwrap_or(TileShape::Square)

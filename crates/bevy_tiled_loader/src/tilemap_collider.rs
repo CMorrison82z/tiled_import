@@ -199,20 +199,20 @@ impl TriangleOrientation {
 }
 
 impl TileShape {
-    pub fn flip_x(self, meter: f32) -> Self {
+    pub fn flip_x(self) -> Self {
         match self {
             TileShape::Triangle(o) => TileShape::Triangle(o.flip_x()),
             TileShape::Polygon(vs) => TileShape::Polygon(vs.into_iter().rev().map(|Vec2 {x, y}| {
-                Vec2 {x: meter - x, y}
+                Vec2 {x: 1. - x, y}
             }).collect()),
             x => x
         }
     }
-    pub fn flip_y(self, meter: f32) -> Self {
+    pub fn flip_y(self) -> Self {
         match self {
             TileShape::Triangle(o) => TileShape::Triangle(o.flip_y()),
             TileShape::Polygon(vs) => TileShape::Polygon(vs.into_iter().rev().map(|Vec2 {x, y}| {
-                Vec2 {x, y: meter - y}
+                Vec2 {x, y: 1. - y}
             }).collect()),
             x => x
         }
