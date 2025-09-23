@@ -156,11 +156,7 @@ pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
         SerializedComponents(HashMap::from([
             (
                 SceneSerializedComponents::SerCollider,
-                bincode::serialize(&Collider::trimesh_with_config(points, triangles, TrimeshFlags::from_bits(
-                    (TrimeshFlags::FIX_INTERNAL_EDGES |
-                    TrimeshFlags::DELETE_DEGENERATE_TRIANGLES |
-                    TrimeshFlags::DELETE_DUPLICATE_TRIANGLES).bits()
-                ).unwrap())).unwrap()
+                bincode::serialize(&Collider::trimesh_with_config(points, triangles, TrimeshFlags::all())).unwrap()
                 // bincode::serialize(&Collider::compound(triangles)).unwrap(),
                 // bincode::serialize(&Collider::convex_decomposition(points, edges)).unwrap(),
             ),
