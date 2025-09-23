@@ -160,7 +160,7 @@ pub fn shapes_to_collider(s: Shapes<FloatPoint<f32>>) -> impl Bundle {
                     TrimeshFlags::FIX_INTERNAL_EDGES |
                     TrimeshFlags::DELETE_DEGENERATE_TRIANGLES |
                     TrimeshFlags::DELETE_DUPLICATE_TRIANGLES
-                ).unwrap()).unwrap(),
+                ).unwrap()).unwrap())
                 // bincode::serialize(&Collider::compound(triangles)).unwrap(),
                 // bincode::serialize(&Collider::convex_decomposition(points, edges)).unwrap(),
             ),
