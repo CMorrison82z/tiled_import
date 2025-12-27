@@ -301,7 +301,7 @@ pub fn tiled_object_to_tile_shape(meter: f32, o: &Object) -> Option<TileShape> {
         // A polyline is not necessarily a closed loop. However, the `Contour`s assume it is
         // closed.
         GeometryType::Polyline(v) => v.iter().map(|&(x, y)| Vec2 {x, y} / meter).collect(),
-    }).into_iter().map(|v| v + Vec2 {x: pos_x, y: pos_y}).collect()))
+    }).into_iter().map(|v| v + Vec2 {x: pos_x, y: pos_y} / meter).collect()))
 }
 
 #[test]
