@@ -1,8 +1,8 @@
 // FIXME:
 // Remove various intermediate `collect` with Iterators.
 
-use std::{collections::HashMap, fmt::Debug, future::Future, pin::Pin, str::FromStr};
-
+use std::{fmt::Debug, future::Future, pin::Pin, str::FromStr};
+use foldhash::HashMap;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use futures_util::future::join_all;
 use itertools::{Either, Itertools};
